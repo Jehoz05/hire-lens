@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { jobSchema } from '@/lib/utils/validators';
-import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -19,6 +16,29 @@ import {
 import { Plus, Trash2, X } from 'lucide-react';
 import { JOB_TYPES, EXPERIENCE_LEVELS, JOB_CATEGORIES } from '@/lib/utils/constants';
 import toast from 'react-hot-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+// Define the job schema directly in the component
+const jobSchema = z.object({
+  title: z.string().min(5, 'Title must be at least 5 characters'),
+  description: z.string().min(50, 'Description must be at least 50 characters'),
+  requirements: z.array(z.string()).min(1, 'Add at least one requirement'),
+  responsibilities: z.array(z.string()).min(1, 'Add at least one responsibility'),
+  location: z.string().min(2, 'Location is required'),
+  type: z.enum(['full-time', 'part-time', 'contract', 'internship', 'remote']),
+  experienceLevel: z.enum(['entry', 'mid', 'senior', 'executive']),
+  salaryMin: z.coerce.number().min(0, 'Salary must be positive'),
+  salaryMax: z.coerce.number().min(0, 'Salary must be positive'),
+  currency: z.string().default('USD'),
+  salaryPeriod: z.enum(['hourly', 'monthly', 'yearly']).default('yearly'),
+  companyName: z.string().min(2, 'Company name is required'),
+  companyLogo: z.string().optional(),
+  companyDescription: z.string().optional(),
+  category: z.string().min(2, 'Category is required'),
+  skills: z.array(z.string()),
+  applicationDeadline: z.string().optional(),
+});
 
 type JobFormData = z.infer<typeof jobSchema>;
 
@@ -44,7 +64,7 @@ export default function JobForm({
     watch,
     formState: { errors },
   } = useForm<JobFormData>({
-    resolver: zodResolver(jobSchema),
+    resolver: zodResolver(jobSchema as any),
     defaultValues: {
       title: initialData?.title || '',
       description: initialData?.description || '',
@@ -109,7 +129,7 @@ export default function JobForm({
     setValue('responsibilities', newResponsibilities);
   };
 
-  const handleFormSubmit = async (data: JobFormData) => {
+  const onFormSubmit = async (data: JobFormData) => {
     try {
       await onSubmit(data);
       toast.success('Job posted successfully!');
@@ -119,7 +139,8 @@ export default function JobForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+      {/* Job Details Card */}
       <Card>
         <CardHeader>
           <CardTitle>Job Details</CardTitle>
@@ -141,7 +162,7 @@ export default function JobForm({
             <div>
               <label className="block text-sm font-medium mb-2">Job Type *</label>
               <Select
-                onValueChange={(value) => setValue('type', value as any)}
+                onValueChange={(value) => setValue('type', value as JobFormData['type'])}
                 defaultValue={watch('type')}
               >
                 <SelectTrigger>
@@ -160,7 +181,7 @@ export default function JobForm({
             <div>
               <label className="block text-sm font-medium mb-2">Experience Level *</label>
               <Select
-                onValueChange={(value) => setValue('experienceLevel', value as any)}
+                onValueChange={(value) => setValue('experienceLevel', value as JobFormData['experienceLevel'])}
                 defaultValue={watch('experienceLevel')}
               >
                 <SelectTrigger>
@@ -225,6 +246,7 @@ export default function JobForm({
         </CardContent>
       </Card>
 
+      {/* Requirements & Responsibilities Card */}
       <Card>
         <CardHeader>
           <CardTitle>Requirements & Responsibilities</CardTitle>
@@ -314,6 +336,7 @@ export default function JobForm({
         </CardContent>
       </Card>
 
+      {/* Skills & Salary Card */}
       <Card>
         <CardHeader>
           <CardTitle>Skills & Salary</CardTitle>
@@ -391,7 +414,7 @@ export default function JobForm({
           <div>
             <label className="block text-sm font-medium mb-2">Salary Period</label>
             <Select
-              onValueChange={(value) => setValue('salaryPeriod', value as any)}
+              onValueChange={(value) => setValue('salaryPeriod', value as JobFormData['salaryPeriod'])}
               defaultValue={watch('salaryPeriod')}
             >
               <SelectTrigger>
@@ -407,6 +430,7 @@ export default function JobForm({
         </CardContent>
       </Card>
 
+      {/* Company Information Card */}
       <Card>
         <CardHeader>
           <CardTitle>Company Information</CardTitle>

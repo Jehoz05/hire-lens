@@ -1,6 +1,7 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+// Define the interface for TypeScript
 export interface IUser extends Document {
   email: string;
   password: string;
@@ -13,24 +14,25 @@ export interface IUser extends Document {
   location?: string;
   bio?: string;
   skills: string[];
-  experience?: {
+  experience?: Array<{
     title: string;
     company: string;
     startDate: Date;
     endDate?: Date;
     current: boolean;
     description?: string;
-  }[];
-  education?: {
+  }>;
+  education?: Array<{
     degree: string;
     institution: string;
     fieldOfStudy: string;
     startDate: Date;
     endDate?: Date;
     current: boolean;
-  }[];
+  }>;
   isVerified: boolean;
   verificationToken?: string;
+  verificationTokenExpiry?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
   lastLogin?: Date;
@@ -40,6 +42,7 @@ export interface IUser extends Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
+// Define the schema
 const userSchema = new Schema<IUser>(
   {
     email: {
@@ -87,6 +90,7 @@ const userSchema = new Schema<IUser>(
     bio: {
       type: String,
       default: '',
+      maxlength: 500,
     },
     skills: [{
       type: String,
@@ -97,7 +101,7 @@ const userSchema = new Schema<IUser>(
       company: String,
       startDate: Date,
       endDate: Date,
-      current: Boolean,
+      current: { type: Boolean, default: false },
       description: String,
     }],
     education: [{
@@ -106,40 +110,46 @@ const userSchema = new Schema<IUser>(
       fieldOfStudy: String,
       startDate: Date,
       endDate: Date,
-      current: Boolean,
+      current: { type: Boolean, default: false },
     }],
     isVerified: {
       type: Boolean,
       default: false,
     },
-    verificationToken: String,
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
-    lastLogin: Date,
+    verificationToken: {
+      type: String,
+    },
+    verificationTokenExpiry: {
+      type: Date,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
+    lastLogin: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error: any) {
-    next(error);
-  }
-});
-
-// Method to compare password
+// Add methods to the schema
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+// Create indexes
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ isVerified: 1 });
+
+// Create the model
+const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+
+export { User };

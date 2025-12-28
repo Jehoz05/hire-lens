@@ -15,6 +15,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+
 export const jobSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(50, 'Description must be at least 50 characters'),
@@ -34,7 +35,6 @@ export const jobSchema = z.object({
   skills: z.array(z.string()),
   applicationDeadline: z.string().optional(),
 });
-
 export const applicationSchema = z.object({
   coverLetter: z.string().min(50, 'Cover letter must be at least 50 characters'),
   resumeId: z.string(),

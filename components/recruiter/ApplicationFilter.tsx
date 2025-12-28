@@ -22,32 +22,45 @@ interface ApplicationFilterProps {
   jobs?: Array<{ _id: string; title: string }>;
 }
 
+interface DateRange {
+  from?: Date;
+  to?: Date;
+}
+
+interface FilterState {
+  search: string;
+  job: string;
+  status: string;
+  dateRange: DateRange;
+  sortBy: string;
+}
+
 export default function ApplicationFilter({ onFilterChange, jobs = [] }: ApplicationFilterProps) {
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FilterState>({
     search: '',
     job: '',
     status: '',
     dateRange: {
-      from: undefined as Date | undefined,
-      to: undefined as Date | undefined,
+      from: undefined,
+      to: undefined,
     },
     sortBy: 'newest',
   });
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: keyof FilterState, value: any) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     onFilterChange(newFilters);
   };
 
-  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+  const handleDateRangeChange = (range: DateRange) => {
     const newFilters = { ...filters, dateRange: range };
     setFilters(newFilters);
     onFilterChange(newFilters);
   };
 
   const handleReset = () => {
-    const resetFilters = {
+    const resetFilters: FilterState = {
       search: '',
       job: '',
       status: '',

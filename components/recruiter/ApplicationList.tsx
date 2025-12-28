@@ -37,7 +37,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { formatDate, getStatusColor } from '@/lib/utils/helpers';
+import { formatDate, getStatusColor } from '@/lib/utils/formatters';
 import Link from 'next/link';
 
 interface Application {

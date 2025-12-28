@@ -237,19 +237,19 @@ export default function HomePage() {
               <div className="flex gap-4 justify-center">
                 {!isAuthenticated ? (
                   <>
-                    <Button size="lg" variant="secondary" asChild>
+                    <Button size="lg" variant="secondary" >
                       <Link href="/auth/register?role=candidate">
                         Sign Up as Candidate
                       </Link>
                     </Button>
-                    <Button size="lg" variant="outline" className="text-primary" asChild>
+                    <Button size="lg" variant="outline" className="text-primary" >
                       <Link href="/auth/register?role=recruiter">
                         Sign Up as Recruiter
                       </Link>
                     </Button>
                   </>
                 ) : (
-                  <Button size="lg" variant="secondary" asChild>
+                  <Button size="lg" variant="secondary" >
                     <Link href={user?.role === 'candidate' ? '/candidate/dashboard' : '/recruiter/dashboard'}>
                       Go to Dashboard
                     </Link>

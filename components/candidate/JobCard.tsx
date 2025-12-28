@@ -130,7 +130,7 @@ export default function JobCard({
           Posted {formatDate(job.createdAt)}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" >
             <Link href={`/jobs/${job._id}`}>
               View Details
               <ChevronRight className="ml-1 h-3 w-3" />
