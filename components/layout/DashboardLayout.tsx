@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import Sidebar from '@/components/common/Sidebar';
-import Navbar from '@/components/common/Navbar';
+import { ReactNode } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import Sidebar from "@/components/common/Sidebar";
+import Navbar from "@/components/common/Navbar";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { status } = useSession();
   const router = useRouter();
 
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -23,8 +23,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  if (status === 'unauthenticated') {
-    router.push('/auth/login');
+  if (status === "unauthenticated") {
+    router.push("/login");
     return null;
   }
 

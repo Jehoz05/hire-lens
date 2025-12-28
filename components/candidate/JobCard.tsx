@@ -1,13 +1,25 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { MapPin, Briefcase, Clock, DollarSign, Building, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils/helpers';
-import { formatDate, formatCurrency, truncateText } from '@/lib/utils/helpers';
+import { useState } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import {
+  MapPin,
+  Briefcase,
+  Clock,
+  DollarSign,
+  Building,
+  ChevronRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils/helpers";
+import { formatDate, formatCurrency, truncateText } from "@/lib/utils/helpers";
 
 interface JobCardProps {
   job: {
@@ -44,7 +56,7 @@ export default function JobCard({
   const handleApply = async () => {
     setIsApplying(true);
     // Apply logic here
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsApplying(false);
   };
 
@@ -73,13 +85,13 @@ export default function JobCard({
             </div>
           </div>
           <Badge
-            variant={job.isActive ? 'default' : 'secondary'}
+            variant={job.isActive ? "default" : "secondary"}
             className={cn(
-              'capitalize',
-              !job.isActive && 'bg-yellow-100 text-yellow-800'
+              "capitalize",
+              !job.isActive && "bg-yellow-100 text-yellow-800"
             )}
           >
-            {job.isActive ? 'Active' : 'Closed'}
+            {job.isActive ? "Active" : "Closed"}
           </Badge>
         </div>
       </CardHeader>
@@ -109,12 +121,12 @@ export default function JobCard({
           </div>
           <div className="flex items-center gap-1">
             <Briefcase className="h-4 w-4 text-muted-foreground" />
-            <span className="capitalize">{job.type.replace('-', ' ')}</span>
+            <span className="capitalize">{job.type.replace("-", " ")}</span>
           </div>
           <div className="flex items-center gap-1">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span>
-              {formatCurrency(job.salary.min, job.salary.currency)} -{' '}
+              {formatCurrency(job.salary.min, job.salary.currency)} -{" "}
               {formatCurrency(job.salary.max, job.salary.currency)}
             </span>
           </div>
@@ -130,12 +142,12 @@ export default function JobCard({
           Posted {formatDate(job.createdAt)}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" >
-            <Link href={`/jobs/${job._id}`}>
+          <Link href={`/jobs/${job._id}`}>
+            <Button variant="outline" size="sm">
               View Details
               <ChevronRight className="ml-1 h-3 w-3" />
-            </Link>
-          </Button>
+            </Button>
+          </Link>
           {showApplyButton && job.isActive && (
             <Button
               size="sm"
@@ -143,7 +155,7 @@ export default function JobCard({
               disabled={isApplying}
               className="min-w-20"
             >
-              {isApplying ? 'Applying...' : 'Apply Now'}
+              {isApplying ? "Applying..." : "Apply Now"}
             </Button>
           )}
         </div>

@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { Button } from '@/components/ui/Button';
-import JobCard from '@/components/candidate/JobCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { Button } from "@/components/ui/Button";
+import JobCard from "@/components/candidate/JobCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import {
   Search,
   Briefcase,
@@ -15,67 +15,70 @@ import {
   Award,
   Shield,
   Zap,
-} from 'lucide-react';
+} from "lucide-react";
 
 const featuredJobs = [
   {
-    _id: '1',
-    title: 'Senior Frontend Developer',
+    _id: "1",
+    title: "Senior Frontend Developer",
     company: {
-      name: 'TechCorp',
-      logo: '/logo-techcorp.png',
+      name: "TechCorp",
+      logo: "/logo-techcorp.png",
     },
-    location: 'Remote',
-    type: 'full-time',
-    experienceLevel: 'senior',
+    location: "Remote",
+    type: "full-time",
+    experienceLevel: "senior",
     salary: {
       min: 120000,
       max: 160000,
-      currency: 'USD',
+      currency: "USD",
     },
-    description: 'We are looking for an experienced Frontend Developer to join our team...',
-    skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-    createdAt: '2024-01-15T10:30:00Z',
+    description:
+      "We are looking for an experienced Frontend Developer to join our team...",
+    skills: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
+    createdAt: "2024-01-15T10:30:00Z",
     isActive: true,
   },
   {
-    _id: '2',
-    title: 'UX/UI Designer',
+    _id: "2",
+    title: "UX/UI Designer",
     company: {
-      name: 'DesignStudio',
-      logo: '/logo-designstudio.png',
+      name: "DesignStudio",
+      logo: "/logo-designstudio.png",
     },
-    location: 'New York, NY',
-    type: 'full-time',
-    experienceLevel: 'mid',
+    location: "New York, NY",
+    type: "full-time",
+    experienceLevel: "mid",
     salary: {
       min: 90000,
       max: 120000,
-      currency: 'USD',
+      currency: "USD",
     },
-    description: 'Join our design team to create beautiful and functional user interfaces...',
-    skills: ['Figma', 'Adobe XD', 'UI/UX Design', 'Prototyping'],
-    createdAt: '2024-01-14T14:20:00Z',
+    description:
+      "Join our design team to create beautiful and functional user interfaces...",
+    skills: ["Figma", "Adobe XD", "UI/UX Design", "Prototyping"],
+    createdAt: "2024-01-14T14:20:00Z",
     isActive: true,
   },
   {
-    _id: '3',
-    title: 'DevOps Engineer',
+    _id: "3",
+    title: "DevOps Engineer",
     company: {
-      name: 'CloudSystems',
-      logo: '/logo-cloudsystems.png',
+      name: "CloudSystems",
+      logo: "/logo-cloudsystems.png",
     },
-    location: 'San Francisco, CA',
-    type: 'remote',
-    experienceLevel: 'senior',
+    location: "San Francisco, CA",
+    type: "remote",
+    experienceLevel: "senior",
     salary: {
       min: 130000,
       max: 180000,
-      currency: 'USD',
+      currency: "USD",
     },
-    description: 'Build and maintain our cloud infrastructure and CI/CD pipelines...',
-    skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform'],
-    createdAt: '2024-01-13T09:15:00Z',
+    description:
+      "Build and maintain our cloud infrastructure and CI/CD pipelines...",
+    skills: ["AWS", "Docker", "Kubernetes", "Terraform"],
+    createdAt: "2024-01-13T09:15:00Z",
     isActive: true,
   },
 ];
@@ -83,29 +86,30 @@ const featuredJobs = [
 const features = [
   {
     icon: Shield,
-    title: 'Secure Platform',
-    description: 'Your data is protected with enterprise-grade security.',
+    title: "Secure Platform",
+    description: "Your data is protected with enterprise-grade security.",
   },
   {
     icon: Zap,
-    title: 'AI-Powered Matching',
-    description: 'Get matched with the perfect job using our intelligent algorithms.',
+    title: "AI-Powered Matching",
+    description:
+      "Get matched with the perfect job using our intelligent algorithms.",
   },
   {
     icon: Users,
-    title: 'Top Companies',
-    description: 'Connect with leading companies across all industries.',
+    title: "Top Companies",
+    description: "Connect with leading companies across all industries.",
   },
   {
     icon: Award,
-    title: 'Career Growth',
-    description: 'Access resources and tools to advance your career.',
+    title: "Career Growth",
+    description: "Access resources and tools to advance your career.",
   },
 ];
 
 export default function HomePage() {
   const { isAuthenticated, user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,14 +125,15 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Find Your <span className="text-primary">Dream Job</span> or{' '}
+              Find Your <span className="text-primary">Dream Job</span> or{" "}
               <span className="text-primary">Top Talent</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-10">
-              Connect with opportunities that match your skills and ambitions. 
-              Join thousands of professionals and companies already using our platform.
+              Connect with opportunities that match your skills and ambitions.
+              Join thousands of professionals and companies already using our
+              platform.
             </p>
-            
+
             <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
               <div className="flex gap-2">
                 <div className="flex-1 relative">
@@ -155,7 +160,9 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">10,000+</div>
+              <div className="text-4xl font-bold text-primary mb-2">
+                10,000+
+              </div>
               <div className="text-muted-foreground">Active Jobs</div>
             </div>
             <div className="text-center">
@@ -163,7 +170,9 @@ export default function HomePage() {
               <div className="text-muted-foreground">Companies</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">50,000+</div>
+              <div className="text-4xl font-bold text-primary mb-2">
+                50,000+
+              </div>
               <div className="text-muted-foreground">Candidates</div>
             </div>
             <div className="text-center">
@@ -180,7 +189,9 @@ export default function HomePage() {
           <div className="flex justify-between items-center mb-10">
             <div>
               <h2 className="text-3xl font-bold mb-2">Featured Jobs</h2>
-              <p className="text-muted-foreground">Hand-picked opportunities from top companies</p>
+              <p className="text-muted-foreground">
+                Hand-picked opportunities from top companies
+              </p>
             </div>
             <Link href="/jobs">
               <Button variant="outline">View All Jobs</Button>
@@ -201,7 +212,8 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Why Choose Our Platform</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              We provide the tools and resources you need to succeed in your career journey
+              We provide the tools and resources you need to succeed in your
+              career journey
             </p>
           </div>
 
@@ -232,28 +244,39 @@ export default function HomePage() {
                 Ready to Take the Next Step?
               </h2>
               <p className="text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-                Join thousands of professionals and companies who have found success on our platform
+                Join thousands of professionals and companies who have found
+                success on our platform
               </p>
               <div className="flex gap-4 justify-center">
                 {!isAuthenticated ? (
                   <>
-                    <Button size="lg" variant="secondary" >
-                      <Link href="/auth/register?role=candidate">
+                    <Link href="/register?role=candidate">
+                      <Button size="lg" variant="secondary">
                         Sign Up as Candidate
-                      </Link>
-                    </Button>
-                    <Button size="lg" variant="outline" className="text-primary" >
-                      <Link href="/auth/register?role=recruiter">
+                      </Button>
+                    </Link>
+                    <Link href="/register?role=recruiter">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="text-primary"
+                      >
                         Sign Up as Recruiter
-                      </Link>
-                    </Button>
+                      </Button>
+                    </Link>
                   </>
                 ) : (
-                  <Button size="lg" variant="secondary" >
-                    <Link href={user?.role === 'candidate' ? '/candidate/dashboard' : '/recruiter/dashboard'}>
+                  <Link
+                    href={
+                      user?.role === "candidate"
+                        ? "/candidate/dashboard"
+                        : "/recruiter/dashboard"
+                    }
+                  >
+                    <Button size="lg" variant="secondary">
                       Go to Dashboard
-                    </Link>
-                  </Button>
+                    </Button>
+                  </Link>
                 )}
               </div>
             </CardContent>

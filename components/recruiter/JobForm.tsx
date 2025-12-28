@@ -1,41 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select';
-import { Plus, Trash2, X } from 'lucide-react';
-import { JOB_TYPES, EXPERIENCE_LEVELS, JOB_CATEGORIES } from '@/lib/utils/constants';
-import toast from 'react-hot-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+} from "@/components/ui/Select";
+import { Plus, Trash2, X } from "lucide-react";
+import {
+  JOB_TYPES,
+  EXPERIENCE_LEVELS,
+  JOB_CATEGORIES,
+} from "@/lib/utils/constants";
+import toast from "react-hot-toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 // Define the job schema directly in the component
+// Update your jobSchema in JobForm.tsx
 const jobSchema = z.object({
-  title: z.string().min(5, 'Title must be at least 5 characters'),
-  description: z.string().min(50, 'Description must be at least 50 characters'),
-  requirements: z.array(z.string()).min(1, 'Add at least one requirement'),
-  responsibilities: z.array(z.string()).min(1, 'Add at least one responsibility'),
-  location: z.string().min(2, 'Location is required'),
-  type: z.enum(['full-time', 'part-time', 'contract', 'internship', 'remote']),
-  experienceLevel: z.enum(['entry', 'mid', 'senior', 'executive']),
-  salaryMin: z.coerce.number().min(0, 'Salary must be positive'),
-  salaryMax: z.coerce.number().min(0, 'Salary must be positive'),
-  currency: z.string().default('USD'),
-  salaryPeriod: z.enum(['hourly', 'monthly', 'yearly']).default('yearly'),
-  companyName: z.string().min(2, 'Company name is required'),
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  description: z.string().min(50, "Description must be at least 50 characters"),
+  requirements: z.array(z.string()).min(1, "Add at least one requirement"),
+  responsibilities: z
+    .array(z.string())
+    .min(1, "Add at least one responsibility"),
+  location: z.string().min(2, "Location is required"),
+  type: z.enum(["full-time", "part-time", "contract", "internship", "remote"]),
+  experienceLevel: z.enum(["entry", "mid", "senior", "executive"]),
+  salaryMin: z.coerce.number().min(0, "Minimum salary is required"),
+  salaryMax: z.coerce.number().min(0, "Maximum salary is required"),
+  currency: z.string().default("USD"),
+  salaryPeriod: z.enum(["hourly", "monthly", "yearly"]).default("yearly"),
+  companyName: z.string().min(2, "Company name is required"),
   companyLogo: z.string().optional(),
   companyDescription: z.string().optional(),
-  category: z.string().min(2, 'Category is required'),
+  category: z.string().min(2, "Category is required"),
   skills: z.array(z.string()),
   applicationDeadline: z.string().optional(),
 });
@@ -53,9 +60,9 @@ export default function JobForm({
   onSubmit,
   isSubmitting = false,
 }: JobFormProps) {
-  const [skillInput, setSkillInput] = useState('');
-  const [requirementInput, setRequirementInput] = useState('');
-  const [responsibilityInput, setResponsibilityInput] = useState('');
+  const [skillInput, setSkillInput] = useState("");
+  const [requirementInput, setRequirementInput] = useState("");
+  const [responsibilityInput, setResponsibilityInput] = useState("");
 
   const {
     register,
@@ -66,75 +73,78 @@ export default function JobForm({
   } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema as any),
     defaultValues: {
-      title: initialData?.title || '',
-      description: initialData?.description || '',
+      title: initialData?.title || "",
+      description: initialData?.description || "",
       requirements: initialData?.requirements || [],
       responsibilities: initialData?.responsibilities || [],
-      location: initialData?.location || '',
-      type: initialData?.type || 'full-time',
-      experienceLevel: initialData?.experienceLevel || 'mid',
+      location: initialData?.location || "",
+      type: initialData?.type || "full-time",
+      experienceLevel: initialData?.experienceLevel || "mid",
       salaryMin: initialData?.salaryMin || 0,
       salaryMax: initialData?.salaryMax || 0,
-      currency: initialData?.currency || 'USD',
-      salaryPeriod: initialData?.salaryPeriod || 'yearly',
-      companyName: initialData?.companyName || '',
-      companyLogo: initialData?.companyLogo || '',
-      companyDescription: initialData?.companyDescription || '',
-      category: initialData?.category || '',
+      currency: initialData?.currency || "USD",
+      salaryPeriod: initialData?.salaryPeriod || "yearly",
+      companyName: initialData?.companyName || "",
+      companyLogo: initialData?.companyLogo || "",
+      companyDescription: initialData?.companyDescription || "",
+      category: initialData?.category || "",
       skills: initialData?.skills || [],
-      applicationDeadline: initialData?.applicationDeadline || '',
+      applicationDeadline: initialData?.applicationDeadline || "",
     },
   });
 
-  const skills = watch('skills') || [];
-  const requirements = watch('requirements') || [];
-  const responsibilities = watch('responsibilities') || [];
+  const skills = watch("skills") || [];
+  const requirements = watch("requirements") || [];
+  const responsibilities = watch("responsibilities") || [];
 
   const addSkill = () => {
     if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setValue('skills', [...skills, skillInput.trim()]);
-      setSkillInput('');
+      setValue("skills", [...skills, skillInput.trim()]);
+      setSkillInput("");
     }
   };
 
   const removeSkill = (index: number) => {
     const newSkills = [...skills];
     newSkills.splice(index, 1);
-    setValue('skills', newSkills);
+    setValue("skills", newSkills);
   };
 
   const addRequirement = () => {
     if (requirementInput.trim()) {
-      setValue('requirements', [...requirements, requirementInput.trim()]);
-      setRequirementInput('');
+      setValue("requirements", [...requirements, requirementInput.trim()]);
+      setRequirementInput("");
     }
   };
 
   const removeRequirement = (index: number) => {
     const newRequirements = [...requirements];
     newRequirements.splice(index, 1);
-    setValue('requirements', newRequirements);
+    setValue("requirements", newRequirements);
   };
 
   const addResponsibility = () => {
     if (responsibilityInput.trim()) {
-      setValue('responsibilities', [...responsibilities, responsibilityInput.trim()]);
-      setResponsibilityInput('');
+      setValue("responsibilities", [
+        ...responsibilities,
+        responsibilityInput.trim(),
+      ]);
+      setResponsibilityInput("");
     }
   };
 
   const removeResponsibility = (index: number) => {
     const newResponsibilities = [...responsibilities];
     newResponsibilities.splice(index, 1);
-    setValue('responsibilities', newResponsibilities);
+    setValue("responsibilities", newResponsibilities);
   };
 
   const onFormSubmit = async (data: JobFormData) => {
     try {
       await onSubmit(data);
-      toast.success('Job posted successfully!');
+      toast.success("Job posted successfully!");
     } catch (error: any) {
-      toast.error(error.message || 'Failed to post job');
+      toast.error(error.message || "Failed to post job");
     }
   };
 
@@ -147,23 +157,31 @@ export default function JobForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Job Title *</label>
+            <label className="block text-sm font-medium mb-2">
+              Job Title *
+            </label>
             <Input
-              {...register('title')}
+              {...register("title")}
               placeholder="e.g., Senior Frontend Developer"
-              className={errors.title ? 'border-red-500' : ''}
+              className={errors.title ? "border-red-500" : ""}
             />
             {errors.title && (
-              <p className="text-sm text-red-500 mt-1">{errors.title.message}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {errors.title.message}
+              </p>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Job Type *</label>
+              <label className="block text-sm font-medium mb-2">
+                Job Type *
+              </label>
               <Select
-                onValueChange={(value) => setValue('type', value as JobFormData['type'])}
-                defaultValue={watch('type')}
+                onValueChange={(value) =>
+                  setValue("type", value as JobFormData["type"])
+                }
+                defaultValue={watch("type")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select job type" />
@@ -179,10 +197,17 @@ export default function JobForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Experience Level *</label>
+              <label className="block text-sm font-medium mb-2">
+                Experience Level *
+              </label>
               <Select
-                onValueChange={(value) => setValue('experienceLevel', value as JobFormData['experienceLevel'])}
-                defaultValue={watch('experienceLevel')}
+                onValueChange={(value) =>
+                  setValue(
+                    "experienceLevel",
+                    value as JobFormData["experienceLevel"]
+                  )
+                }
+                defaultValue={watch("experienceLevel")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select experience level" />
@@ -200,22 +225,28 @@ export default function JobForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Location *</label>
+              <label className="block text-sm font-medium mb-2">
+                Location *
+              </label>
               <Input
-                {...register('location')}
+                {...register("location")}
                 placeholder="e.g., Remote, New York, NY"
-                className={errors.location ? 'border-red-500' : ''}
+                className={errors.location ? "border-red-500" : ""}
               />
               {errors.location && (
-                <p className="text-sm text-red-500 mt-1">{errors.location.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.location.message}
+                </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Category *</label>
+              <label className="block text-sm font-medium mb-2">
+                Category *
+              </label>
               <Select
-                onValueChange={(value) => setValue('category', value)}
-                defaultValue={watch('category')}
+                onValueChange={(value) => setValue("category", value)}
+                defaultValue={watch("category")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
@@ -232,15 +263,19 @@ export default function JobForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Job Description *</label>
+            <label className="block text-sm font-medium mb-2">
+              Job Description *
+            </label>
             <Textarea
-              {...register('description')}
+              {...register("description")}
               placeholder="Describe the job responsibilities, team, culture, etc."
               rows={6}
-              className={errors.description ? 'border-red-500' : ''}
+              className={errors.description ? "border-red-500" : ""}
             />
             {errors.description && (
-              <p className="text-sm text-red-500 mt-1">{errors.description.message}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {errors.description.message}
+              </p>
             )}
           </div>
         </CardContent>
@@ -253,14 +288,16 @@ export default function JobForm({
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Requirements *</label>
+            <label className="block text-sm font-medium mb-2">
+              Requirements *
+            </label>
             <div className="flex gap-2 mb-3">
               <Input
                 value={requirementInput}
                 onChange={(e) => setRequirementInput(e.target.value)}
                 placeholder="Add a requirement"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     addRequirement();
                   }
@@ -289,19 +326,23 @@ export default function JobForm({
               ))}
             </div>
             {errors.requirements && (
-              <p className="text-sm text-red-500 mt-1">{errors.requirements.message}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {errors.requirements.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Responsibilities *</label>
+            <label className="block text-sm font-medium mb-2">
+              Responsibilities *
+            </label>
             <div className="flex gap-2 mb-3">
               <Input
                 value={responsibilityInput}
                 onChange={(e) => setResponsibilityInput(e.target.value)}
                 placeholder="Add a responsibility"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     addResponsibility();
                   }
@@ -330,7 +371,9 @@ export default function JobForm({
               ))}
             </div>
             {errors.responsibilities && (
-              <p className="text-sm text-red-500 mt-1">{errors.responsibilities.message}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {errors.responsibilities.message}
+              </p>
             )}
           </div>
         </CardContent>
@@ -343,14 +386,16 @@ export default function JobForm({
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Required Skills</label>
+            <label className="block text-sm font-medium mb-2">
+              Required Skills
+            </label>
             <div className="flex gap-2 mb-3">
               <Input
                 value={skillInput}
                 onChange={(e) => setSkillInput(e.target.value)}
                 placeholder="Add a skill (e.g., React, Python, AWS)"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     addSkill();
                   }
@@ -381,41 +426,50 @@ export default function JobForm({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Minimum Salary *</label>
+              <label className="block text-sm font-medium mb-2">
+                Minimum Salary *
+              </label>
               <Input
                 type="number"
-                {...register('salaryMin', { valueAsNumber: true })}
-                className={errors.salaryMin ? 'border-red-500' : ''}
+                {...register("salaryMin", { valueAsNumber: true })}
+                className={errors.salaryMin ? "border-red-500" : ""}
               />
               {errors.salaryMin && (
-                <p className="text-sm text-red-500 mt-1">{errors.salaryMin.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.salaryMin.message}
+                </p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Maximum Salary *</label>
+              <label className="block text-sm font-medium mb-2">
+                Maximum Salary *
+              </label>
               <Input
                 type="number"
-                {...register('salaryMax', { valueAsNumber: true })}
-                className={errors.salaryMax ? 'border-red-500' : ''}
+                {...register("salaryMax", { valueAsNumber: true })}
+                className={errors.salaryMax ? "border-red-500" : ""}
               />
               {errors.salaryMax && (
-                <p className="text-sm text-red-500 mt-1">{errors.salaryMax.message}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.salaryMax.message}
+                </p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Currency</label>
-              <Input
-                {...register('currency')}
-                placeholder="USD"
-              />
+              <Input {...register("currency")} placeholder="USD" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Salary Period</label>
+            <label className="block text-sm font-medium mb-2">
+              Salary Period
+            </label>
             <Select
-              onValueChange={(value) => setValue('salaryPeriod', value as JobFormData['salaryPeriod'])}
-              defaultValue={watch('salaryPeriod')}
+              onValueChange={(value) =>
+                setValue("salaryPeriod", value as JobFormData["salaryPeriod"])
+              }
+              defaultValue={watch("salaryPeriod")}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select period" />
@@ -437,29 +491,37 @@ export default function JobForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Company Name *</label>
+            <label className="block text-sm font-medium mb-2">
+              Company Name *
+            </label>
             <Input
-              {...register('companyName')}
+              {...register("companyName")}
               placeholder="Your company name"
-              className={errors.companyName ? 'border-red-500' : ''}
+              className={errors.companyName ? "border-red-500" : ""}
             />
             {errors.companyName && (
-              <p className="text-sm text-red-500 mt-1">{errors.companyName.message}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {errors.companyName.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Company Logo URL</label>
+            <label className="block text-sm font-medium mb-2">
+              Company Logo URL
+            </label>
             <Input
-              {...register('companyLogo')}
+              {...register("companyLogo")}
               placeholder="https://example.com/logo.png"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Company Description</label>
+            <label className="block text-sm font-medium mb-2">
+              Company Description
+            </label>
             <Textarea
-              {...register('companyDescription')}
+              {...register("companyDescription")}
               placeholder="Brief description about your company"
               rows={3}
             />
@@ -472,7 +534,7 @@ export default function JobForm({
           Save as Draft
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Posting...' : 'Post Job'}
+          {isSubmitting ? "Posting..." : "Post Job"}
         </Button>
       </div>
     </form>

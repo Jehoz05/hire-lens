@@ -78,12 +78,21 @@ const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Redirect to appropriate dashboard based on role
+      if (url.startsWith(baseUrl)) {
+        // If user is trying to access /dashboard, redirect to role-based dashboard
+        if (url.includes("/dashboard")) {
+          return `${baseUrl}/dashboard`; // We'll handle this in middleware or a redirect page
+        }
+        return url;
+      }
+      return baseUrl;
+    },
   },
   pages: {
-    signIn: "/auth/login",
-    error: "/auth/error",
-    // Note: 'signUp' is not a valid property in NextAuth pages configuration
-    // Users will be redirected to your custom /auth/register page
+    signIn: "/login",
+    error: "/error",
   },
   session: {
     strategy: "jwt",

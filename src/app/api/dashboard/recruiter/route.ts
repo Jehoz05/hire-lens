@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     const user = await User.findOne({ email: session.user.email });
-    if (user.role !== 'recruiter') {
+    if (user?.role !== 'recruiter') {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }

@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { loginSchema } from '@/lib/utils/validators';
-import { z } from 'zod';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { AlertCircle, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema } from "@/lib/utils/validators";
+import { z } from "zod";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
+import { AlertCircle, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
@@ -32,23 +38,23 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         email: data.email,
         password: data.password,
         redirect: false,
       });
 
       if (result?.error) {
-        toast.error('Invalid email or password');
+        toast.error("Invalid email or password");
         return;
       }
 
-      toast.success('Login successful!');
-      router.push('/dashboard');
+      toast.success("Login successful!");
+      router.push("/dashboard");
       router.refresh();
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Something went wrong. Please try again.');
+      console.error("Login error:", error);
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -56,10 +62,10 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      await signIn("google", { callbackUrl: "/dashboard" });
     } catch (error) {
-      console.error('Google login error:', error);
-      toast.error('Failed to login with Google');
+      console.error("Google login error:", error);
+      toast.error("Failed to login with Google");
     }
   };
 
@@ -84,7 +90,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="you@example.com"
                   className="pl-10"
-                  {...register('email')}
+                  {...register("email")}
                 />
               </div>
               {errors.email && (
@@ -100,10 +106,10 @@ export default function LoginPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="pl-10 pr-10"
-                  {...register('password')}
+                  {...register("password")}
                 />
                 <button
                   type="button"
@@ -137,7 +143,7 @@ export default function LoginPage() {
                 </label>
               </div>
               <Link
-                href="/auth/forgot-password"
+                href="/forgot-password"
                 className="text-sm text-primary hover:underline"
               >
                 Forgot password?
@@ -145,7 +151,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
 
             <div className="relative my-6">
@@ -187,8 +193,8 @@ export default function LoginPage() {
             </Button>
 
             <div className="text-center text-sm">
-              Don't have an account?{' '}
-              <Link href="/auth/register" className="text-primary hover:underline">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-primary hover:underline">
                 Sign up
               </Link>
             </div>

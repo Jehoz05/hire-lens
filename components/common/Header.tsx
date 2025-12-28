@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { useState } from "react";
+import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,14 +12,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/Dropdown';
-import { Bell, Search, User, Briefcase, Menu, X } from 'lucide-react';
-import { cn } from '@/lib/utils/helpers';
+} from "@/components/ui/Dropdown";
+import { Bell, Search, User, Briefcase, Menu, X } from "lucide-react";
+import { cn } from "@/lib/utils/helpers";
 
 export default function Header() {
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const user = session?.user;
 
@@ -27,7 +27,9 @@ export default function Header() {
     e.preventDefault();
     if (searchQuery.trim()) {
       // Navigate to search results
-      window.location.href = `/search/jobs?q=${encodeURIComponent(searchQuery)}`;
+      window.location.href = `/search/jobs?q=${encodeURIComponent(
+        searchQuery
+      )}`;
     }
   };
 
@@ -56,7 +58,7 @@ export default function Header() {
               >
                 Companies
               </Link>
-              {user?.role === 'recruiter' && (
+              {user?.role === "recruiter" && (
                 <>
                   <Link
                     href="/recruiter/dashboard"
@@ -72,7 +74,7 @@ export default function Header() {
                   </Link>
                 </>
               )}
-              {user?.role === 'candidate' && (
+              {user?.role === "candidate" && (
                 <>
                   <Link
                     href="/candidate/dashboard"
@@ -124,11 +126,14 @@ export default function Header() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
                     {user.image ? (
                       <img
                         src={user.image}
-                        alt={user.name || 'User'}
+                        alt={user.name || "User"}
                         className="rounded-full"
                       />
                     ) : (
@@ -140,8 +145,12 @@ export default function Header() {
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                      <p className="text-xs text-primary capitalize">{user.role}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                      <p className="text-xs text-primary capitalize">
+                        {user.role}
+                      </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -165,12 +174,12 @@ export default function Header() {
               </DropdownMenu>
             ) : (
               <div className="hidden md:flex items-center gap-2">
-                <Button variant="ghost">
-                   <Link href="/auth/login">Sign in</Link>
-                </Button>
-                <Button>
-                  <Link href="/auth/register">Sign up</Link>
-                </Button>
+                <Link href="/login">
+                  <Button variant="ghost">Sign in</Button>
+                </Link>
+                <Link href="/register">
+                  <Button>Sign up</Button>
+                </Link>
               </div>
             )}
 
@@ -209,14 +218,14 @@ export default function Header() {
               {!user && (
                 <>
                   <Link
-                    href="/auth/login"
+                    href="/login"
                     className="text-sm font-medium hover:text-primary transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign in
                   </Link>
                   <Link
-                    href="/auth/register"
+                    href="/register"
                     className="text-sm font-medium hover:text-primary transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import dbConnect from '@/lib/utils/dbConnect';
-import { Application } from '@/lib/models/Application';
-import { Job } from '@/lib/models/Job';
-import { Resume } from '@/lib/models/Resume';
-import { User } from '@/lib/models/User';
-import { sendApplicationConfirmation } from '@/lib/email/emailService';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import dbConnect from "@/lib/utils/dbConnect";
+import { Application } from "@/lib/models/Application";
+import { Job } from "@/lib/models/Job";
+import { Resume } from "@/lib/models/Resume";
+import { User } from "@/lib/models/User";
+import { sendApplicationConfirmation } from "@/lib/email/emailService";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,17 +13,14 @@ export async function GET(request: NextRequest) {
 
     const session = await getServerSession();
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const status = searchParams.get('status');
-    const jobId = searchParams.get('jobId');
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const status = searchParams.get("status");
+    const jobId = searchParams.get("jobId");
 
     const skip = (page - 1) * limit;
 
@@ -31,12 +28,12 @@ export async function GET(request: NextRequest) {
 
     let query: any = {};
 
-    if (user.role === 'candidate') {
+    if (user?.role === "candidate") {
       query.candidate = user._id;
-    } else if (user.role === 'recruiter') {
+    } else if (user?.role === "recruiter") {
       // Get jobs posted by this recruiter
-      const jobs = await Job.find({ recruiter: user._id }).select('_id');
-      const jobIds = jobs.map(job => job._id);
+      const jobs = await Job.find({ recruiter: user._id }).select("_id");
+      const jobIds = jobs.map((job) => job._id);
       query.job = { $in: jobIds };
     }
 
@@ -50,9 +47,9 @@ export async function GET(request: NextRequest) {
 
     const [applications, total] = await Promise.all([
       Application.find(query)
-        .populate('job', 'title company')
-        .populate('candidate', 'firstName lastName email')
-        .populate('resume', 'originalFileName')
+        .populate("job", "title company")
+        .populate("candidate", "firstName lastName email")
+        .populate("resume", "originalFileName")
         .sort({ appliedAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -70,9 +67,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Get applications error:', error);
+    console.error("Get applications error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -84,16 +81,13 @@ export async function POST(request: NextRequest) {
 
     const session = await getServerSession();
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await User.findOne({ email: session.user.email });
-    if (user.role !== 'candidate') {
+    if (user?.role !== "candidate") {
       return NextResponse.json(
-        { error: 'Only candidates can apply for jobs' },
+        { error: "Only candidates can apply for jobs" },
         { status: 403 }
       );
     }
@@ -102,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     if (!jobId || !resumeId) {
       return NextResponse.json(
-        { error: 'Job ID and Resume ID are required' },
+        { error: "Job ID and Resume ID are required" },
         { status: 400 }
       );
     }
@@ -111,7 +105,7 @@ export async function POST(request: NextRequest) {
     const job = await Job.findOne({ _id: jobId, isActive: true });
     if (!job) {
       return NextResponse.json(
-        { error: 'Job not found or no longer active' },
+        { error: "Job not found or no longer active" },
         { status: 404 }
       );
     }
@@ -119,10 +113,7 @@ export async function POST(request: NextRequest) {
     // Check if resume belongs to user
     const resume = await Resume.findOne({ _id: resumeId, user: user._id });
     if (!resume) {
-      return NextResponse.json(
-        { error: 'Resume not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Resume not found" }, { status: 404 });
     }
 
     // Check if already applied
@@ -133,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     if (existingApplication) {
       return NextResponse.json(
-        { error: 'You have already applied for this job' },
+        { error: "You have already applied for this job" },
         { status: 400 }
       );
     }
@@ -148,42 +139,46 @@ export async function POST(request: NextRequest) {
       job: jobId,
       candidate: user._id,
       resume: resumeId,
-      coverLetter: coverLetter || '',
+      coverLetter: coverLetter || "",
       matchingScore: matchScore,
     });
 
     // Increment application count on job
-    await Job.updateOne(
-      { _id: jobId },
-      { $inc: { applications: 1 } }
-    );
+    await Job.updateOne({ _id: jobId }, { $inc: { applications: 1 } });
 
     // Send confirmation email
     await sendApplicationConfirmation(user.email, job.title);
 
-    return NextResponse.json({
-      success: true,
-      data: application,
-      message: 'Application submitted successfully',
-    }, { status: 201 });
-  } catch (error: any) {
-    console.error('Create application error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        success: true,
+        data: application,
+        message: "Application submitted successfully",
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("Create application error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
-function calculateMatchScore(jobSkills: string[], resumeSkills: string[]): number {
+function calculateMatchScore(
+  jobSkills: string[],
+  resumeSkills: string[]
+): number {
   if (jobSkills.length === 0) return 0;
-  
-  const matchedSkills = resumeSkills.filter(skill => 
-    jobSkills.some(jobSkill => 
-      jobSkill.toLowerCase().includes(skill.toLowerCase()) ||
-      skill.toLowerCase().includes(jobSkill.toLowerCase())
+
+  const matchedSkills = resumeSkills.filter((skill) =>
+    jobSkills.some(
+      (jobSkill) =>
+        jobSkill.toLowerCase().includes(skill.toLowerCase()) ||
+        skill.toLowerCase().includes(jobSkill.toLowerCase())
     )
   );
-  
+
   return Math.round((matchedSkills.length / jobSkills.length) * 100);
 }
