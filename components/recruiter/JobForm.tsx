@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { Plus, Trash2, X } from "lucide-react";
+import { Switch } from "@/components/ui/Switch";
+import { Plus, Trash2, X, Globe, EyeOff, Save, Send } from "lucide-react";
 import {
   JOB_TYPES,
   EXPERIENCE_LEVELS,
@@ -23,34 +24,54 @@ import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-// Define the job schema directly in the component
-// Update your jobSchema in JobForm.tsx
+// FIX: Make all fields optional with defaults
 const jobSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(50, "Description must be at least 50 characters"),
-  requirements: z.array(z.string()).min(1, "Add at least one requirement"),
+  title: z.string().min(5, "Title must be at least 5 characters").optional(),
+  description: z
+    .string()
+    .min(50, "Description must be at least 50 characters")
+    .optional(),
+  requirements: z
+    .array(z.string())
+    .min(1, "Add at least one requirement")
+    .optional(),
   responsibilities: z
     .array(z.string())
-    .min(1, "Add at least one responsibility"),
-  location: z.string().min(2, "Location is required"),
-  type: z.enum(["full-time", "part-time", "contract", "internship", "remote"]),
-  experienceLevel: z.enum(["entry", "mid", "senior", "executive"]),
-  salaryMin: z.coerce.number().min(0, "Minimum salary is required"),
-  salaryMax: z.coerce.number().min(0, "Maximum salary is required"),
-  currency: z.string().default("USD"),
-  salaryPeriod: z.enum(["hourly", "monthly", "yearly"]).default("yearly"),
-  companyName: z.string().min(2, "Company name is required"),
+    .min(1, "Add at least one responsibility")
+    .optional(),
+  location: z.string().min(2, "Location is required").optional(),
+  type: z
+    .enum(["full-time", "part-time", "contract", "internship", "remote"])
+    .optional(),
+  experienceLevel: z.enum(["entry", "mid", "senior", "executive"]).optional(),
+  salaryMin: z.coerce.number().min(0, "Minimum salary is required").optional(),
+  salaryMax: z.coerce.number().min(0, "Maximum salary is required").optional(),
+  currency: z.string().default("USD").optional(),
+  salaryPeriod: z
+    .enum(["hourly", "monthly", "yearly"])
+    .default("yearly")
+    .optional(),
+  companyName: z.string().min(2, "Company name is required").optional(),
   companyLogo: z.string().optional(),
   companyDescription: z.string().optional(),
-  category: z.string().min(2, "Category is required"),
-  skills: z.array(z.string()),
+  category: z.string().min(2, "Category is required").optional(),
+  skills: z.array(z.string()).optional(),
   applicationDeadline: z.string().optional(),
+
+  // 🔥 NEW FIELDS for publishing
+  isPublished: z.boolean().default(false).optional(),
+  status: z
+    .enum(["draft", "published", "closed", "archived"])
+    .default("draft")
+    .optional(),
+  isActive: z.boolean().default(true).optional(),
 });
 
-type JobFormData = z.infer<typeof jobSchema>;
+// Create a type that makes everything optional
+type JobFormData = Partial<z.infer<typeof jobSchema>>;
 
 interface JobFormProps {
-  initialData?: Partial<JobFormData>;
+  initialData?: JobFormData;
   onSubmit: (data: JobFormData) => Promise<void>;
   isSubmitting?: boolean;
 }
@@ -63,6 +84,33 @@ export default function JobForm({
   const [skillInput, setSkillInput] = useState("");
   const [requirementInput, setRequirementInput] = useState("");
   const [responsibilityInput, setResponsibilityInput] = useState("");
+  const [isPublishing, setIsPublishing] = useState(
+    initialData?.isPublished || false
+  );
+
+  // Provide default values for all fields
+  const defaultValues = {
+    title: initialData?.title || "",
+    description: initialData?.description || "",
+    requirements: initialData?.requirements || [],
+    responsibilities: initialData?.responsibilities || [],
+    location: initialData?.location || "",
+    type: initialData?.type || "full-time",
+    experienceLevel: initialData?.experienceLevel || "mid",
+    salaryMin: initialData?.salaryMin || 0,
+    salaryMax: initialData?.salaryMax || 0,
+    currency: initialData?.currency || "USD",
+    salaryPeriod: initialData?.salaryPeriod || "yearly",
+    companyName: initialData?.companyName || "",
+    companyLogo: initialData?.companyLogo || "",
+    companyDescription: initialData?.companyDescription || "",
+    category: initialData?.category || "",
+    skills: initialData?.skills || [],
+    applicationDeadline: initialData?.applicationDeadline || "",
+    isPublished: initialData?.isPublished || false,
+    status: initialData?.status || "draft",
+    isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
+  };
 
   const {
     register,
@@ -71,31 +119,15 @@ export default function JobForm({
     watch,
     formState: { errors },
   } = useForm<JobFormData>({
-    resolver: zodResolver(jobSchema as any),
-    defaultValues: {
-      title: initialData?.title || "",
-      description: initialData?.description || "",
-      requirements: initialData?.requirements || [],
-      responsibilities: initialData?.responsibilities || [],
-      location: initialData?.location || "",
-      type: initialData?.type || "full-time",
-      experienceLevel: initialData?.experienceLevel || "mid",
-      salaryMin: initialData?.salaryMin || 0,
-      salaryMax: initialData?.salaryMax || 0,
-      currency: initialData?.currency || "USD",
-      salaryPeriod: initialData?.salaryPeriod || "yearly",
-      companyName: initialData?.companyName || "",
-      companyLogo: initialData?.companyLogo || "",
-      companyDescription: initialData?.companyDescription || "",
-      category: initialData?.category || "",
-      skills: initialData?.skills || [],
-      applicationDeadline: initialData?.applicationDeadline || "",
-    },
+    resolver: zodResolver(jobSchema),
+    defaultValues,
   });
 
   const skills = watch("skills") || [];
   const requirements = watch("requirements") || [];
   const responsibilities = watch("responsibilities") || [];
+  const isPublished = watch("isPublished");
+  const status = watch("status");
 
   const addSkill = () => {
     if (skillInput.trim() && !skills.includes(skillInput.trim())) {
@@ -139,12 +171,29 @@ export default function JobForm({
     setValue("responsibilities", newResponsibilities);
   };
 
+  const handlePublishToggle = (published: boolean) => {
+    setIsPublishing(published);
+    setValue("isPublished", published);
+    setValue("status", published ? "published" : "draft");
+    setValue("isActive", published);
+  };
+
   const onFormSubmit = async (data: JobFormData) => {
     try {
-      await onSubmit(data);
-      toast.success("Job posted successfully!");
+      // Ensure all required fields are present with defaults
+      const finalData = {
+        ...defaultValues, // Start with defaults
+        ...data, // Override with form data
+        status: data.isPublished ? "published" : "draft",
+        isActive: data.isPublished,
+      };
+
+      await onSubmit(finalData);
+      toast.success(
+        data.isPublished ? "Job published successfully!" : "Job saved as draft!"
+      );
     } catch (error: any) {
-      toast.error(error.message || "Failed to post job");
+      toast.error(error.message || "Failed to save job");
     }
   };
 
@@ -529,12 +578,118 @@ export default function JobForm({
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" disabled={isSubmitting}>
+      {/* 🔥 NEW: Publishing Options Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Publishing Options</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2 rounded-full ${
+                  isPublishing
+                    ? "bg-green-100 text-green-600"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {isPublishing ? (
+                  <Globe className="h-5 w-5" />
+                ) : (
+                  <EyeOff className="h-5 w-5" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-medium">
+                  {isPublishing ? "Publish Job" : "Save as Draft"}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {isPublishing
+                    ? "Job will be visible to candidates"
+                    : "Job will be saved as draft and hidden"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={isPublishing}
+              onCheckedChange={handlePublishToggle}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="applicationDeadline"
+                className="block text-sm font-medium mb-2"
+              >
+                Application Deadline (Optional)
+              </label>
+              <Input
+                type="date"
+                id="applicationDeadline"
+                {...register("applicationDeadline")}
+                min={new Date().toISOString().split("T")[0]}
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Automatically close applications after this date
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Job Status
+              </label>
+              <div className="p-3 border rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Current Status:</span>
+                  <span
+                    className={`font-medium ${
+                      isPublishing ? "text-green-600" : "text-yellow-600"
+                    }`}
+                  >
+                    {isPublishing ? "PUBLISHED" : "DRAFT"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end gap-4 pt-6 border-t">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => handlePublishToggle(false)}
+          disabled={isSubmitting}
+        >
+          <Save className="h-4 w-4 mr-2" />
           Save as Draft
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Posting..." : "Post Job"}
+        <Button
+          type="button"
+          variant="outline"
+          className="border-green-200 text-green-700 hover:bg-green-50"
+          onClick={() => handlePublishToggle(true)}
+          disabled={isSubmitting}
+        >
+          <Globe className="h-4 w-4 mr-2" />
+          Save & Publish
+        </Button>
+        <Button type="submit" disabled={isSubmitting} className="min-w-32">
+          {isSubmitting ? (
+            "Saving..."
+          ) : isPublishing ? (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Publish Job
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save Draft
+            </>
+          )}
         </Button>
       </div>
     </form>

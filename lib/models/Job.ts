@@ -31,109 +31,41 @@ export interface IJob extends Document {
   updatedAt: Date;
 }
 
-const jobSchema = new Schema<IJob>(
-  {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
-    requirements: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    responsibilities: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    location: {
-      type: String,
-      required: true,
-    },
-    type: {
-      type: String,
-      enum: ["full-time", "part-time", "contract", "internship", "remote"],
-      required: true,
-    },
-    experienceLevel: {
-      type: String,
-      enum: ["entry", "mid", "senior", "executive"],
-      required: true,
-    },
-    salary: {
-      min: {
-        type: Number,
-        required: true,
-      },
-      max: {
-        type: Number,
-        required: true,
-      },
-      currency: {
-        type: String,
-        default: "USD",
-      },
-      period: {
-        type: String,
-        enum: ["hourly", "monthly", "yearly"],
-        default: "yearly",
-      },
-    },
-    company: {
-      name: {
-        type: String,
-        required: true,
-      },
-      logo: String,
-      description: String,
-    },
-    recruiter: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    category: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    skills: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    applicationDeadline: Date,
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-    status: {
-      type: String,
-      enum: ["active", "draft", "closed"],
-      default: "draft",
-    },
-    views: {
-      type: Number,
-      default: 0,
-    },
-    applications: {
-      type: Number,
-      default: 0,
-    },
+const jobSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  requirements: [String],
+  responsibilities: [String],
+  location: String,
+  type: String,
+  experienceLevel: String,
+  salary: {
+    min: Number,
+    max: Number,
+    currency: { type: String, default: "USD" },
+    period: { type: String, default: "yearly" },
   },
-  {
-    timestamps: true,
-  }
-);
+  category: String,
+  skills: [String],
+  company: { type: mongoose.Schema.Types.ObjectId, ref: "Company" },
+  recruiter: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+  // 🔥 NEW: Publishing fields
+  isActive: { type: Boolean, default: false },
+  isPublished: { type: Boolean, default: false },
+  status: {
+    type: String,
+    enum: ["draft", "published", "closed", "archived"],
+    default: "draft",
+  },
+
+  applicationDeadline: Date,
+  isRemote: Boolean,
+  applicantsCount: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
 
 // Index for search functionality
 jobSchema.index({ title: "text", description: "text", skills: "text" });

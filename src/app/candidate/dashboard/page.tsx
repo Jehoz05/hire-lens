@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import {
   TrendingUp,
   Briefcase,
@@ -16,7 +16,10 @@ import {
   Bell,
   Upload,
   Eye,
-} from 'lucide-react';
+  Calendar,
+  DollarSign,
+  MapPin,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -26,91 +29,108 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
+import Link from "next/link";
+import { format } from "date-fns";
 
-const mockData = {
-  applicationStats: [
-    { status: 'Applied', count: 15 },
-    { status: 'Reviewed', count: 8 },
-    { status: 'Shortlisted', count: 4 },
-    { status: 'Interview', count: 2 },
-    { status: 'Rejected', count: 3 },
-    { status: 'Hired', count: 1 },
-  ],
-  monthlyActivity: [
-    { month: 'Jan', applications: 3, interviews: 1 },
-    { month: 'Feb', applications: 5, interviews: 2 },
-    { month: 'Mar', applications: 4, interviews: 1 },
-    { month: 'Apr', applications: 6, interviews: 3 },
-    { month: 'May', applications: 8, interviews: 4 },
-    { month: 'Jun', applications: 10, interviews: 5 },
-  ],
-  recommendedJobs: [
-    {
-      id: '1',
-      title: 'Senior Frontend Developer',
-      company: 'TechCorp',
-      location: 'Remote',
-      match: 92,
-      salary: '$120,000 - $160,000',
-    },
-    {
-      id: '2',
-      title: 'React Developer',
-      company: 'StartupXYZ',
-      location: 'New York, NY',
-      match: 88,
-      salary: '$100,000 - $140,000',
-    },
-    {
-      id: '3',
-      title: 'Full Stack Engineer',
-      company: 'InnovateCo',
-      location: 'San Francisco, CA',
-      match: 85,
-      salary: '$130,000 - $180,000',
-    },
-  ],
-  recentApplications: [
-    {
-      id: '1',
-      job: 'Frontend Developer',
-      company: 'TechCorp',
-      date: '2024-01-15',
-      status: 'shortlisted',
-      nextStep: 'Technical Interview',
-    },
-    {
-      id: '2',
-      job: 'UX Designer',
-      company: 'DesignStudio',
-      date: '2024-01-14',
-      status: 'reviewed',
-      nextStep: 'Portfolio Review',
-    },
-    {
-      id: '3',
-      job: 'Product Manager',
-      company: 'ProductLabs',
-      date: '2024-01-12',
-      status: 'applied',
-      nextStep: 'Awaiting Review',
-    },
-  ],
-};
+interface Application {
+  _id: string;
+  job: {
+    _id: string;
+    title: string;
+    company: {
+      name: string;
+    };
+  };
+  status: string;
+  appliedAt: string;
+  matchingScore: number;
+  nextStep?: string;
+}
+
+interface DashboardStats {
+  totalApplications: number;
+  activeApplications: number;
+  interviewsScheduled: number;
+  jobOffers: number;
+  profileCompletion: number;
+  resumeScore: number;
+  applicationStats: Array<{ status: string; count: number }>;
+  monthlyActivity: Array<{
+    month: string;
+    applications: number;
+    interviews: number;
+  }>;
+  recentApplications: Application[];
+  recommendedJobs: Array<{
+    _id: string;
+    title: string;
+    company: { name: string };
+    location: string;
+    matchingScore: number;
+    salary?: { min: number; max: number; currency: string };
+  }>;
+}
 
 export default function CandidateDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
+  const [dashboardData, setDashboardData] = useState<DashboardStats | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchDashboardData();
     }
   }, [status, router]);
 
-  if (status === 'loading') {
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/dashboard/candidate");
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApply = async (jobId: string) => {
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jobId }),
+      });
+
+      if (response.ok) {
+        alert("Application submitted successfully!");
+        fetchDashboardData(); // Refresh dashboard data
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to apply");
+      }
+    } catch (error) {
+      console.error("Error applying:", error);
+      alert("Failed to submit application");
+    }
+  };
+
+  if (status === "loading" || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -118,25 +138,44 @@ export default function CandidateDashboard() {
     );
   }
 
-  const stats = {
-    totalApplications: 15,
-    activeApplications: 8,
-    interviewsScheduled: 3,
-    jobOffers: 1,
-    profileCompletion: 85,
-    resumeScore: 78,
-  };
+  if (!dashboardData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Unable to load dashboard</h2>
+          <Button onClick={fetchDashboardData}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const stats = dashboardData;
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
-      applied: 'bg-blue-100 text-blue-800',
-      reviewed: 'bg-yellow-100 text-yellow-800',
-      shortlisted: 'bg-green-100 text-green-800',
-      interview: 'bg-purple-100 text-purple-800',
-      rejected: 'bg-red-100 text-red-800',
-      hired: 'bg-emerald-100 text-emerald-800',
+      applied: "bg-blue-100 text-blue-800",
+      reviewed: "bg-yellow-100 text-yellow-800",
+      shortlisted: "bg-green-100 text-green-800",
+      interview: "bg-purple-100 text-purple-800",
+      rejected: "bg-red-100 text-red-800",
+      hired: "bg-emerald-100 text-emerald-800",
+      offered: "bg-emerald-100 text-emerald-800",
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status.toLowerCase()] || "bg-gray-100 text-gray-800";
+  };
+
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "MMM d, yyyy");
+  };
+
+  const formatSalary = (salary: {
+    min: number;
+    max: number;
+    currency: string;
+  }) => {
+    return `${
+      salary.currency
+    } ${salary.min.toLocaleString()} - ${salary.max.toLocaleString()}`;
   };
 
   return (
@@ -145,7 +184,8 @@ export default function CandidateDashboard() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, {session?.user?.name}! Ready for your next opportunity?
+            Welcome back, {session?.user?.name}! Ready for your next
+            opportunity?
           </p>
         </div>
         <div className="flex gap-3">
@@ -153,7 +193,7 @@ export default function CandidateDashboard() {
             <Bell className="h-4 w-4 mr-2" />
             Notifications
           </Button>
-          <Button onClick={() => router.push('/candidate/resume')}>
+          <Button onClick={() => router.push("/candidate/resume")}>
             <Upload className="h-4 w-4 mr-2" />
             Update Resume
           </Button>
@@ -164,21 +204,25 @@ export default function CandidateDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Applications
+            </CardTitle>
             <Briefcase className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalApplications}</div>
             <div className="text-xs text-muted-foreground mt-1">
               <TrendingUp className="inline h-3 w-3 text-green-600 mr-1" />
-              +12% from last month
+              All applications submitted
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Applications</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Applications
+            </CardTitle>
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
@@ -191,13 +235,17 @@ export default function CandidateDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Interviews Scheduled</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Interviews Scheduled
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.interviewsScheduled}</div>
+            <div className="text-2xl font-bold">
+              {stats.interviewsScheduled}
+            </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Next interview in 2 days
+              Upcoming interviews
             </div>
           </CardContent>
         </Card>
@@ -217,7 +265,9 @@ export default function CandidateDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Profile Completion</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Profile Completion
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
@@ -248,7 +298,11 @@ export default function CandidateDashboard() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
@@ -266,7 +320,7 @@ export default function CandidateDashboard() {
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={mockData.applicationStats}>
+                    <BarChart data={stats.applicationStats}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="status" />
                       <YAxis />
@@ -285,15 +339,18 @@ export default function CandidateDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockData.recentApplications.map((app) => (
+                  {stats.recentApplications.map((app) => (
                     <div
-                      key={app.id}
+                      key={app._id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors"
                     >
-                      <div>
-                        <div className="font-medium">{app.job}</div>
+                      <div className="flex-1">
+                        <div className="font-medium">{app.job.title}</div>
                         <div className="text-sm text-muted-foreground">
-                          {app.company}
+                          {app.job.company.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Applied {formatDate(app.appliedAt)}
                         </div>
                       </div>
                       <div className="text-right">
@@ -301,12 +358,17 @@ export default function CandidateDashboard() {
                           {app.status}
                         </Badge>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {app.nextStep}
+                          {app.matchingScore}% Match
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                {stats.recentApplications.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No applications yet
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -319,14 +381,22 @@ export default function CandidateDashboard() {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={mockData.monthlyActivity}>
+                  <BarChart data={stats.monthlyActivity}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="applications" fill="#0077b5" name="Applications" />
-                    <Bar dataKey="interviews" fill="#00a866" name="Interviews" />
+                    <Bar
+                      dataKey="applications"
+                      fill="#0077b5"
+                      name="Applications"
+                    />
+                    <Bar
+                      dataKey="interviews"
+                      fill="#00a866"
+                      name="Interviews"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -340,7 +410,67 @@ export default function CandidateDashboard() {
               <CardTitle>Your Applications</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Detailed applications list will go here</p>
+              {stats.recentApplications.length === 0 ? (
+                <div className="text-center py-12">
+                  <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    No applications yet
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Start applying to jobs to see them here
+                  </p>
+                  <Link href="/jobs">
+                    <Button>Browse Jobs</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {stats.recentApplications.map((app) => (
+                    <div
+                      key={app._id}
+                      className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg">
+                            <Link
+                              href={`/jobs/${app.job._id}`}
+                              className="hover:text-primary"
+                            >
+                              {app.job.title}
+                            </Link>
+                          </h3>
+                          <p className="text-muted-foreground">
+                            {app.job.company.name}
+                          </p>
+                          <div className="flex items-center gap-4 mt-2">
+                            <span className="text-sm text-gray-600">
+                              Applied {formatDate(app.appliedAt)}
+                            </span>
+                            <Badge className={getStatusBadge(app.status)}>
+                              {app.status}
+                            </Badge>
+                            <span className="text-sm">
+                              Match: {app.matchingScore}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link href={`/jobs/${app.job._id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-3 w-3 mr-1" />
+                              View Job
+                            </Button>
+                          </Link>
+                          <Link href={`/candidate/applications/${app._id}`}>
+                            <Button size="sm">View Details</Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -352,27 +482,39 @@ export default function CandidateDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockData.recommendedJobs.map((job) => (
+                {stats.recommendedJobs.map((job) => (
                   <div
-                    key={job.id}
+                    key={job._id}
                     className="p-4 border rounded-lg hover:bg-secondary transition-colors"
                   >
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-semibold text-lg">{job.title}</h3>
-                        <p className="text-muted-foreground">{job.company} • {job.location}</p>
-                        <p className="text-sm mt-2">{job.salary}</p>
+                        <p className="text-muted-foreground">
+                          {job.company.name} • {job.location}
+                        </p>
+                        {job.salary && (
+                          <p className="text-sm mt-2">
+                            <DollarSign className="inline h-3 w-3 mr-1" />
+                            {formatSalary(job.salary)}
+                          </p>
+                        )}
                       </div>
                       <div className="text-right">
                         <Badge className="bg-green-100 text-green-800">
-                          {job.match}% Match
+                          {job.matchingScore}% Match
                         </Badge>
                         <div className="mt-2 space-x-2">
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button size="sm">
+                          <Link href={`/jobs/${job._id}`}>
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-3 w-3 mr-1" />
+                              View
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApply(job._id)}
+                          >
                             Apply Now
                           </Button>
                         </div>
@@ -381,6 +523,11 @@ export default function CandidateDashboard() {
                   </div>
                 ))}
               </div>
+              {stats.recommendedJobs.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No recommended jobs at the moment
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -391,7 +538,36 @@ export default function CandidateDashboard() {
               <CardTitle>Application Analytics</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Detailed analytics will go here</p>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-medium mb-2">Success Rate</h3>
+                  <div className="w-full bg-gray-200 rounded-full h-4">
+                    <div
+                      className="bg-primary h-4 rounded-full"
+                      style={{ width: `${stats.resumeScore}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Based on your resume quality and application history
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold">
+                      {stats.totalApplications}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Total Applications
+                    </div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {stats.interviewsScheduled}
+                    </div>
+                    <div className="text-sm text-gray-600">Interviews</div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

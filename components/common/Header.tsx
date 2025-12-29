@@ -41,7 +41,7 @@ export default function Header() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
               <Briefcase className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">RecruitPro</span>
+              <span className="text-xl font-bold">Open Door</span>
             </Link>
 
             {/* Desktop Navigation */}

@@ -6,6 +6,7 @@ import { User } from "@/lib/models/User";
 import { Job } from "@/lib/models/Job";
 import { Resume } from "@/lib/models/Resume";
 import { sendApplicationConfirmation } from "@/lib/email/emailService";
+import mongoose from "mongoose";
 
 // GET applications with filters
 export async function GET(request: NextRequest) {
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest) {
         .populate("candidate", "firstName lastName email avatar")
         .sort({ appliedAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Application.countDocuments(query),
     ]);
 
@@ -100,7 +102,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// CREATE new application
+// CREATE new application - FIXED VERSION
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
@@ -122,36 +124,31 @@ export async function POST(request: NextRequest) {
     const { jobId, resumeId, coverLetter } = body;
 
     // Validate required fields
-    if (!jobId || !resumeId) {
+    if (!jobId) {
       return NextResponse.json(
-        { error: "Job ID and Resume ID are required" },
+        { error: "Job ID is required" },
         { status: 400 }
       );
     }
 
-    // Check if job exists and is active
+    // Check if job exists and is published
     const job = await Job.findById(jobId);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    if (!job.isActive) {
+    if (!job.isPublished || !job.isActive || job.status !== "published") {
       return NextResponse.json(
         { error: "This job is no longer accepting applications" },
         { status: 400 }
       );
     }
 
-    // Check if resume belongs to user
-    const resume = await Resume.findOne({
-      _id: resumeId,
-      user: user._id,
-    });
-
-    if (!resume) {
+    // Check if job has expired
+    if (job.expiresAt && new Date(job.expiresAt) < new Date()) {
       return NextResponse.json(
-        { error: "Resume not found or access denied" },
-        { status: 404 }
+        { error: "Job application deadline has passed" },
+        { status: 400 }
       );
     }
 
@@ -168,9 +165,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get candidate's primary resume (if resumeId not provided)
+    let resume;
+    if (resumeId) {
+      // Check if resume belongs to user
+      resume = await Resume.findOne({
+        _id: resumeId,
+        user: user._id,
+      });
+
+      if (!resume) {
+        return NextResponse.json(
+          { error: "Resume not found or access denied" },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Get primary resume
+      resume = await Resume.findOne({
+        user: user._id,
+        isPrimary: true,
+      });
+
+      if (!resume) {
+        return NextResponse.json(
+          { error: "Please upload a resume before applying" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Calculate match score
     const jobSkills = job.skills || [];
-    const resumeSkills = resume.parsedData?.structuredData?.skills || [];
+    const resumeSkills =
+      resume.parsedData?.skills ||
+      resume.parsedData?.structuredData?.skills ||
+      [];
     let matchingScore = 0;
 
     if (jobSkills.length > 0 && resumeSkills.length > 0) {
@@ -186,20 +216,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create application
-    const application = await Application.create({
+    // Create application with additional fields
+    const applicationData: any = {
       job: jobId,
       candidate: user._id,
-      resume: resumeId,
+      resume: resume._id,
       coverLetter: coverLetter || "",
-      status: "pending",
+      status: "applied",
       appliedAt: new Date(),
       matchingScore,
-    });
+    };
 
-    // Increment job applications count
+    // Add notes if provided
+    if (body.notes) {
+      applicationData.notes = body.notes;
+    }
+
+    // Create application with proper type handling
+    const applicationDoc = await Application.create(applicationData);
+
+    // Type guard to ensure we have a document
+    if (!applicationDoc || !(applicationDoc instanceof mongoose.Document)) {
+      throw new Error("Failed to create application document");
+    }
+
+    // Convert to object and get the ID safely
+    const application = applicationDoc.toObject();
+    const applicationId = application._id?.toString();
+
+    if (!applicationId) {
+      throw new Error("Application ID not found after creation");
+    }
+
+    // Update job applicants count
     await Job.findByIdAndUpdate(jobId, {
-      $inc: { applications: 1 },
+      $inc: { applicantsCount: 1 },
     });
 
     // Send confirmation email
@@ -210,16 +261,129 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if email fails
     }
 
+    // Get populated application data safely
+    const populatedApplication = await Application.findById(applicationId)
+      .populate("job", "title company location")
+      .populate("candidate", "firstName lastName email")
+      .lean();
+
+    if (!populatedApplication) {
+      throw new Error("Failed to retrieve created application");
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: application,
+        data: populatedApplication,
         message: "Application submitted successfully",
       },
       { status: 201 }
     );
   } catch (error: any) {
     console.error("Create application error:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update application status
+export async function PATCH(request: NextRequest) {
+  try {
+    await dbConnect();
+
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await User.findOne({ email: session.user.email });
+    if (!user || user.role !== "recruiter") {
+      return NextResponse.json(
+        { error: "Only recruiters can update application status" },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { applicationId, status, notes } = body;
+
+    if (!applicationId || !status) {
+      return NextResponse.json(
+        { error: "Application ID and status are required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if application exists and recruiter has access
+    const application = await Application.findById(applicationId).populate({
+      path: "job",
+      populate: {
+        path: "recruiter",
+        select: "_id",
+      },
+    });
+
+    if (!application) {
+      return NextResponse.json(
+        { error: "Application not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if recruiter owns the job
+    const job = application.job as any;
+    if (
+      !job ||
+      !job.recruiter ||
+      job.recruiter._id.toString() !== user._id.toString()
+    ) {
+      return NextResponse.json(
+        { error: "Access denied - you don't own this job" },
+        { status: 403 }
+      );
+    }
+
+    // Valid statuses
+    const validStatuses = [
+      "applied",
+      "reviewed",
+      "shortlisted",
+      "interview",
+      "rejected",
+      "hired",
+      "withdrawn",
+    ];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    // Update application
+    const updateData: any = { status };
+    if (notes !== undefined) {
+      updateData.notes = notes;
+    }
+
+    const updatedApplication = await Application.findByIdAndUpdate(
+      applicationId,
+      updateData,
+      { new: true }
+    )
+      .populate("candidate", "firstName lastName email")
+      .lean();
+
+    if (!updatedApplication) {
+      throw new Error("Failed to update application");
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: updatedApplication,
+      message: "Application status updated successfully",
+    });
+  } catch (error: any) {
+    console.error("Update application error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
