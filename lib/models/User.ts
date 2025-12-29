@@ -1,5 +1,5 @@
-import mongoose, { Document, Schema, Model } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import mongoose, { Document, Schema, Model } from "mongoose";
+import bcrypt from "bcryptjs";
 
 // Define the interface for TypeScript
 export interface IUser extends Document {
@@ -7,7 +7,7 @@ export interface IUser extends Document {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'recruiter' | 'candidate';
+  role: "recruiter" | "candidate";
   avatar?: string;
   company?: string;
   title?: string;
@@ -30,6 +30,11 @@ export interface IUser extends Document {
     endDate?: Date;
     current: boolean;
   }>;
+  favorites?: Array<{
+    candidate: mongoose.Types.ObjectId;
+    notes?: string;
+    addedAt: Date;
+  }>;
   isVerified: boolean;
   verificationToken?: string;
   verificationTokenExpiry?: Date;
@@ -38,7 +43,7 @@ export interface IUser extends Document {
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
-  
+
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -68,50 +73,69 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['recruiter', 'candidate'],
+      enum: ["recruiter", "candidate"],
       required: true,
     },
     avatar: {
       type: String,
-      default: '',
+      default: "",
     },
     company: {
       type: String,
-      default: '',
+      default: "",
     },
     title: {
       type: String,
-      default: '',
+      default: "",
     },
     location: {
       type: String,
-      default: '',
+      default: "",
     },
     bio: {
       type: String,
-      default: '',
+      default: "",
       maxlength: 500,
     },
-    skills: [{
-      type: String,
-      trim: true,
-    }],
-    experience: [{
-      title: String,
-      company: String,
-      startDate: Date,
-      endDate: Date,
-      current: { type: Boolean, default: false },
-      description: String,
-    }],
-    education: [{
-      degree: String,
-      institution: String,
-      fieldOfStudy: String,
-      startDate: Date,
-      endDate: Date,
-      current: { type: Boolean, default: false },
-    }],
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    experience: [
+      {
+        title: String,
+        company: String,
+        startDate: Date,
+        endDate: Date,
+        current: { type: Boolean, default: false },
+        description: String,
+      },
+    ],
+    education: [
+      {
+        degree: String,
+        institution: String,
+        fieldOfStudy: String,
+        startDate: Date,
+        endDate: Date,
+        current: { type: Boolean, default: false },
+      },
+    ],
+    favorites: [
+      {
+        candidate: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+        notes: String,
+        addedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     isVerified: {
       type: Boolean,
       default: false,
@@ -150,6 +174,7 @@ userSchema.index({ role: 1 });
 userSchema.index({ isVerified: 1 });
 
 // Create the model
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", userSchema);
 
 export { User };

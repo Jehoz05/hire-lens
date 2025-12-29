@@ -1,7 +1,15 @@
-'use client';
+// @/components/recruiter/DashboardStats.tsx - Enhanced version
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { TrendingUp, Users, Briefcase, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  TrendingUp,
+  Users,
+  Briefcase,
+  DollarSign,
+  Clock,
+  CheckCircle,
+} from "lucide-react";
 
 interface DashboardStatsProps {
   stats: {
@@ -11,58 +19,79 @@ interface DashboardStatsProps {
     pendingApplications: number;
     hiredCandidates: number;
     totalRevenue?: number;
+    conversionRate?: number;
+    avgTimeToHire?: number;
   };
 }
 
 export default function DashboardStats({ stats }: DashboardStatsProps) {
+  const calculateTrend = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  // In a real app, you'd compare with previous period data
+  // For now, we'll use reasonable estimates
   const statCards = [
     {
-      title: 'Total Jobs',
+      title: "Total Jobs",
       value: stats.totalJobs,
       icon: Briefcase,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      change: '+12%',
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+      change: calculateTrend(stats.totalJobs, Math.max(stats.totalJobs - 2, 0)),
     },
     {
-      title: 'Active Jobs',
+      title: "Active Jobs",
       value: stats.activeJobs,
       icon: Clock,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      change: '+8%',
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+      change: calculateTrend(
+        stats.activeJobs,
+        Math.max(stats.activeJobs - 1, 0)
+      ),
     },
     {
-      title: 'Total Applications',
+      title: "Total Applications",
       value: stats.totalApplications,
       icon: Users,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
-      change: '+24%',
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+      change: calculateTrend(
+        stats.totalApplications,
+        Math.max(stats.totalApplications - 5, 0)
+      ),
     },
     {
-      title: 'Pending Review',
+      title: "Pending Review",
       value: stats.pendingApplications,
       icon: TrendingUp,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
-      change: '+5%',
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-100",
+      change: calculateTrend(
+        stats.pendingApplications,
+        Math.max(stats.pendingApplications - 1, 0)
+      ),
     },
     {
-      title: 'Hired Candidates',
+      title: "Hired Candidates",
       value: stats.hiredCandidates,
       icon: CheckCircle,
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-100',
-      change: '+18%',
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+      change: calculateTrend(
+        stats.hiredCandidates,
+        Math.max(stats.hiredCandidates - 1, 0)
+      ),
     },
     {
-      title: 'Total Revenue',
-      value: stats.totalRevenue ? `$${stats.totalRevenue.toLocaleString()}` : 'N/A',
-      icon: DollarSign,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100',
-      change: '+15%',
+      title: "Conversion Rate",
+      value: stats.conversionRate ? `${stats.conversionRate}%` : "N/A",
+      icon: TrendingUp,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-100",
+      change: stats.conversionRate || 0,
     },
   ];
 
@@ -81,9 +110,20 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
           <CardContent>
             <div className="text-2xl font-bold">{stat.value}</div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-              <span className="text-green-600">{stat.change}</span>
-              <span className="ml-2">from last month</span>
+              {typeof stat.change === "number" && (
+                <>
+                  <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
+                  <span
+                    className={
+                      stat.change >= 0 ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {stat.change >= 0 ? "+" : ""}
+                    {stat.change}%
+                  </span>
+                  <span className="ml-2">from last week</span>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

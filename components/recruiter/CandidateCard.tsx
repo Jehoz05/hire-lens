@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import {
   User,
   MapPin,
@@ -15,8 +15,8 @@ import {
   MessageSquare,
   Star,
   StarOff,
-} from 'lucide-react';
-import { cn } from '@/lib/utils/helpers';
+} from "lucide-react";
+import { cn } from "@/lib/utils/helpers";
 
 interface CandidateCardProps {
   candidate: {
@@ -32,6 +32,11 @@ interface CandidateCardProps {
     matchScore: number;
     isFavorite?: boolean;
     resumeUrl?: string;
+    appliedJobs: Array<{
+      jobTitle: string;
+      appliedAt: string;
+      status: string;
+    }>;
   };
   onViewProfile?: () => void;
   onContact?: () => void;
@@ -56,9 +61,9 @@ export default function CandidateCard({
   };
 
   const getMatchColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-100';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    if (score >= 80) return "text-green-600 bg-green-100";
+    if (score >= 60) return "text-yellow-600 bg-yellow-100";
+    return "text-red-600 bg-red-100";
   };
 
   return (
@@ -88,7 +93,9 @@ export default function CandidateCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={cn("font-medium", getMatchColor(candidate.matchScore))}>
+            <Badge
+              className={cn("font-medium", getMatchColor(candidate.matchScore))}
+            >
               {candidate.matchScore}% Match
             </Badge>
             <button
@@ -145,7 +152,9 @@ export default function CandidateCard({
                 <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
                   <div className="font-medium">Experience</div>
-                  <div className="text-muted-foreground">{candidate.experience}</div>
+                  <div className="text-muted-foreground">
+                    {candidate.experience}
+                  </div>
                 </div>
               </div>
             )}
@@ -154,7 +163,9 @@ export default function CandidateCard({
                 <GraduationCap className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
                   <div className="font-medium">Education</div>
-                  <div className="text-muted-foreground">{candidate.education}</div>
+                  <div className="text-muted-foreground">
+                    {candidate.education}
+                  </div>
                 </div>
               </div>
             )}
@@ -163,27 +174,15 @@ export default function CandidateCard({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button
-            size="sm"
-            className="flex-1"
-            onClick={onViewProfile}
-          >
+          <Button size="sm" className="flex-1" onClick={onViewProfile}>
             View Profile
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onContact}
-          >
+          <Button size="sm" variant="outline" onClick={onContact}>
             <MessageSquare className="h-4 w-4 mr-1" />
             Contact
           </Button>
           {candidate.resumeUrl && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onDownloadResume}
-            >
+            <Button size="sm" variant="outline" onClick={onDownloadResume}>
               <Download className="h-4 w-4 mr-1" />
               Resume
             </Button>

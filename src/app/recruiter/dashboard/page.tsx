@@ -1,3 +1,4 @@
+// @/app/recruiter/dashboard/page.tsx - Updated with real data
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,7 +9,13 @@ import ApplicationList from "@/components/recruiter/ApplicationList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import { Calendar, Users, TrendingUp, AlertCircle } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  TrendingUp,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -20,63 +27,184 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
+import toast from "react-hot-toast";
 
-const mockData = {
-  monthlyApplications: [
-    { month: "Jan", applications: 65, hires: 12 },
-    { month: "Feb", applications: 78, hires: 15 },
-    { month: "Mar", applications: 90, hires: 18 },
-    { month: "Apr", applications: 82, hires: 16 },
-    { month: "May", applications: 95, hires: 20 },
-    { month: "Jun", applications: 110, hires: 22 },
-  ],
-  topJobs: [
-    { title: "Frontend Developer", applications: 45, hires: 8 },
-    { title: "Backend Engineer", applications: 38, hires: 6 },
-    { title: "UX Designer", applications: 32, hires: 5 },
-    { title: "Product Manager", applications: 28, hires: 4 },
-    { title: "DevOps Engineer", applications: 25, hires: 3 },
-  ],
-  recentActivity: [
-    {
-      action: "New application received",
-      candidate: "John Doe",
-      job: "Frontend Developer",
-      time: "2 hours ago",
-    },
-    {
-      action: "Interview scheduled",
-      candidate: "Jane Smith",
-      job: "UX Designer",
-      time: "5 hours ago",
-    },
-    {
-      action: "Job posted",
-      title: "Senior Backend Engineer",
-      time: "1 day ago",
-    },
-    {
-      action: "Candidate hired",
-      candidate: "Mike Johnson",
-      job: "Product Manager",
-      time: "2 days ago",
-    },
-  ],
-};
+interface DashboardData {
+  stats: {
+    totalJobs: number;
+    activeJobs: number;
+    totalApplications: number;
+    pendingApplications: number;
+    hiredCandidates: number;
+    conversionRate: number;
+    avgTimeToHire: number;
+    candidateSatisfaction: number;
+  };
+  recentApplications: Array<{
+    _id: string;
+    candidate: {
+      name: string;
+      email: string;
+      avatar?: string;
+    };
+    job: {
+      title: string;
+      _id: string;
+    };
+    status: string;
+    appliedAt: string;
+    matchingScore: number;
+    resume: {
+      _id: string;
+      originalFileName: string;
+    };
+  }>;
+  applicationsByStatus: Array<{
+    _id: string;
+    count: number;
+  }>;
+  monthlyApplications: Array<{
+    _id: {
+      year: number;
+      month: number;
+    };
+    applications: number;
+    hires: number;
+  }>;
+  topJobs: Array<{
+    title: string;
+    applications: number;
+    hires: number;
+    conversion: number;
+  }>;
+  recentActivity: Array<{
+    action: string;
+    candidate?: string;
+    job?: string;
+    title?: string;
+    time: string;
+  }>;
+}
 
 export default function RecruiterDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
+      return;
     }
-  }, [status, router]);
 
-  if (status === "loading") {
+    if (status === "authenticated" && session?.user?.role === "recruiter") {
+      fetchDashboardData();
+    }
+  }, [status, session, router]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/dashboard/recruiter");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard data");
+      }
+
+      const data = await response.json();
+      setDashboardData(data.data);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+  };
+
+  const handleStatusChange = async (
+    applicationId: string,
+    newStatus: string
+  ) => {
+    try {
+      const response = await fetch(
+        `/api/applications/${applicationId}/status`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (response.ok) {
+        toast.success(`Application status updated to ${newStatus}`);
+        fetchDashboardData(); // Refresh data
+      } else {
+        throw new Error("Failed to update status");
+      }
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      toast.error(error.message || "Failed to update status");
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    console.log("Searching for:", query);
+    // Implement search functionality
+  };
+
+  const handleFilterChange = (filter: any) => {
+    console.log("Filter changed:", filter);
+    // Implement filter functionality
+  };
+
+  // Transform data for charts
+  const getChartData = () => {
+    if (!dashboardData)
+      return { monthlyData: [], statusData: [], sourceData: [] };
+
+    // Monthly applications chart data
+    const monthlyData =
+      dashboardData.monthlyApplications?.map((item) => ({
+        month: `${item._id.month}/${item._id.year}`,
+        applications: item.applications,
+        hires: item.hires,
+      })) || [];
+
+    // Application status chart data
+    const statusData =
+      dashboardData.applicationsByStatus?.map((item) => ({
+        status: item._id,
+        count: item.count,
+      })) || [];
+
+    // Source data (you might need to add this to your API)
+    const sourceData = [
+      { name: "LinkedIn", value: 35, color: "#0077b5" },
+      { name: "Indeed", value: 25, color: "#2164f3" },
+      { name: "Company Website", value: 20, color: "#00a866" },
+      { name: "Referrals", value: 12, color: "#ff6b6b" },
+      { name: "Other", value: 8, color: "#7950f2" },
+    ];
+
+    return { monthlyData, statusData, sourceData };
+  };
+
+  if (status === "loading" || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -84,52 +212,24 @@ export default function RecruiterDashboard() {
     );
   }
 
-  const stats = {
-    totalJobs: 24,
-    activeJobs: 18,
-    totalApplications: 342,
-    pendingApplications: 28,
-    hiredCandidates: 45,
-    totalRevenue: 24500,
-  };
+  if (!dashboardData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">No Data Available</h1>
+          <p className="text-muted-foreground mb-6">
+            Unable to load dashboard data. Please try again.
+          </p>
+          <Button onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const applications = [
-    {
-      _id: "1",
-      candidate: { name: "John Doe", email: "john@example.com", avatar: "" },
-      job: { title: "Frontend Developer", _id: "1" },
-      status: "pending",
-      appliedAt: "2024-01-15T10:30:00Z",
-      matchingScore: 85,
-      resume: { _id: "1", originalFileName: "john_doe_resume.pdf" },
-    },
-    {
-      _id: "2",
-      candidate: { name: "Jane Smith", email: "jane@example.com", avatar: "" },
-      job: { title: "UX Designer", _id: "2" },
-      status: "reviewed",
-      appliedAt: "2024-01-14T14:20:00Z",
-      matchingScore: 92,
-      resume: { _id: "2", originalFileName: "jane_smith_resume.pdf" },
-    },
-    // Add more mock applications as needed
-  ];
-
-  const handleStatusChange = async (
-    applicationId: string,
-    newStatus: string
-  ) => {
-    // Implement status change logic
-    console.log(`Changing application ${applicationId} to ${newStatus}`);
-  };
-
-  const handleSearch = (query: string) => {
-    console.log("Searching for:", query);
-  };
-
-  const handleFilterChange = (filter: any) => {
-    console.log("Filter changed:", filter);
-  };
+  const { monthlyData, statusData, sourceData } = getChartData();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -141,25 +241,35 @@ export default function RecruiterDashboard() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
           <Button variant="outline">
             <Calendar className="h-4 w-4 mr-2" />
             Calendar
           </Button>
-          <Button>
+          <Button onClick={() => router.push("/recruiter/jobs/new")}>
             <Users className="h-4 w-4 mr-2" />
             Post New Job
           </Button>
         </div>
       </div>
 
-      <DashboardStats stats={stats} />
+      <DashboardStats stats={dashboardData.stats} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -167,12 +277,17 @@ export default function RecruiterDashboard() {
             {/* Applications Chart */}
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>Applications Overview</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Monthly Trends</CardTitle>
+                  <Button variant="ghost" size="sm">
+                    View Details
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mockData.monthlyApplications}>
+                    <LineChart data={monthlyData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
@@ -205,14 +320,16 @@ export default function RecruiterDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockData.topJobs.map((job, index) => (
+                  {dashboardData.topJobs?.slice(0, 5).map((job, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary transition-colors"
                     >
                       <div>
-                        <div className="font-medium">{job.title}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="font-medium text-sm truncate max-w-37.5">
+                          {job.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
                           {job.applications} applications
                         </div>
                       </div>
@@ -221,8 +338,7 @@ export default function RecruiterDashboard() {
                           {job.hires} hires
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {Math.round((job.hires / job.applications) * 100)}%
-                          success
+                          {job.conversion}% success
                         </div>
                       </div>
                     </div>
@@ -239,7 +355,7 @@ export default function RecruiterDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockData.recentActivity.map((activity, index) => (
+                {dashboardData.recentActivity?.map((activity, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-4 p-3 rounded-lg hover:bg-secondary transition-colors"
@@ -264,53 +380,150 @@ export default function RecruiterDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Application Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value, percent }: any) =>
+                          `${name}: ${((percent || 0) * 100).toFixed(0)}%`
+                        }
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={
+                              entry.status === "pending"
+                                ? "#fbbf24"
+                                : entry.status === "shortlisted"
+                                ? "#10b981"
+                                : entry.status === "hired"
+                                ? "#8b5cf6"
+                                : entry.status === "rejected"
+                                ? "#ef4444"
+                                : "#3b82f6"
+                            }
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Application Sources
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={sourceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value">
+                        {sourceData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Button
+                    className="w-full justify-start"
+                    onClick={() => router.push("/recruiter/jobs/new")}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Post New Job
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => router.push("/recruiter/applications")}
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    View Applications
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => router.push("/recruiter/candidates")}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Search Candidates
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => router.push("/recruiter/analytics")}
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    View Analytics
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="applications">
           <ApplicationList
-            applications={applications}
+            applications={dashboardData.recentApplications}
             onStatusChange={handleStatusChange}
             onSearch={handleSearch}
             onFilterChange={handleFilterChange}
           />
         </TabsContent>
 
-        <TabsContent value="jobs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Job Posts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Job management content will go here
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="analytics">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Application Sources</CardTitle>
+                <CardTitle>Application Funnel</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
+                <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { source: "LinkedIn", applications: 120 },
-                        { source: "Indeed", applications: 85 },
-                        { source: "Company Website", applications: 65 },
-                        { source: "Referrals", applications: 45 },
-                        { source: "Other", applications: 27 },
-                      ]}
-                    >
+                    <BarChart data={statusData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="source" />
+                      <XAxis dataKey="status" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="applications" fill="#0077b5" />
+                      <Legend />
+                      <Bar dataKey="count" fill="#0077b5" name="Applications" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -322,28 +535,84 @@ export default function RecruiterDashboard() {
                 <CardTitle>Candidate Quality</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { score: "90-100%", count: 18 },
-                        { score: "80-89%", count: 32 },
-                        { score: "70-79%", count: 45 },
-                        { score: "60-69%", count: 28 },
-                        { score: "Below 60%", count: 15 },
-                      ]}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="score" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#00a866" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Average Match Score</span>
+                    <span className="font-bold">
+                      {dashboardData.stats.conversionRate}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Average Time to Hire</span>
+                    <span className="font-bold">
+                      {dashboardData.stats.avgTimeToHire} days
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Candidate Satisfaction</span>
+                    <span className="font-bold">
+                      {dashboardData.stats.candidateSatisfaction}/5
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold">
+                      {dashboardData.stats.conversionRate}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Conversion Rate
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold">
+                      {dashboardData.stats.avgTimeToHire}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Avg. Days to Hire
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold">
+                      $
+                      {(
+                        dashboardData.stats.totalApplications * 10
+                      ).toLocaleString()}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Estimated Savings
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold">
+                      {dashboardData.stats.hiredCandidates}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total Hires
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
