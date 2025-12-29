@@ -62,10 +62,10 @@ export default function PostJobPage() {
         category: jobData.category,
         skills: jobData.skills || [],
         applicationDeadline: jobData.applicationDeadline || undefined,
-        recruiter: session.user?.id,
+        // Remove recruiter field - it should be set by the API based on session
       };
 
-      console.log("Sending to API:", formattedData); // Debug log
+      console.log("📤 Sending to API:", formattedData);
 
       const response = await fetch("/api/jobs", {
         method: "POST",
@@ -76,16 +76,26 @@ export default function PostJobPage() {
       });
 
       const result = await response.json();
-      console.log("API Response:", result); // Debug log
+      console.log("📥 API Response:", result);
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to create job");
       }
 
+      if (!result.data?._id) {
+        console.error("❌ No job ID returned:", result);
+        throw new Error("Job created but no ID returned");
+      }
+
       toast.success("Job posted successfully!");
-      router.push(`/recruiter/jobs/${result.data._id}`);
+
+      // Add a small delay to ensure database is updated
+      setTimeout(() => {
+        router.push(`/recruiter/jobs/${result.data._id}`);
+        router.refresh(); // Refresh the page to load new data
+      }, 500);
     } catch (error: any) {
-      console.error("Job creation error:", error);
+      console.error("❌ Job creation error:", error);
       toast.error(error.message || "Failed to post job. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -123,50 +133,6 @@ export default function PostJobPage() {
           </CardHeader>
           <CardContent>
             <JobForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
-          </CardContent>
-        </Card>
-
-        {/* Tips Section */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Tips for a Great Job Post</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="text-primary font-medium">•</span>
-                <span>
-                  <strong>Be specific</strong> with job title and requirements
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary font-medium">•</span>
-                <span>
-                  <strong>Include salary range</strong> to attract more
-                  candidates
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary font-medium">•</span>
-                <span>
-                  <strong>List key skills</strong> required for the role
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary font-medium">•</span>
-                <span>
-                  <strong>Describe company culture</strong> to attract
-                  like-minded candidates
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary font-medium">•</span>
-                <span>
-                  <strong>Be clear about remote work options</strong> if
-                  applicable
-                </span>
-              </li>
-            </ul>
           </CardContent>
         </Card>
       </div>

@@ -2,54 +2,79 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import dbConnect from "@/lib/utils/dbConnect";
 import { Application } from "@/lib/models/Application";
+import { User } from "@/lib/models/User";
 import { Job } from "@/lib/models/Job";
 import { Resume } from "@/lib/models/Resume";
-import { User } from "@/lib/models/User";
 import { sendApplicationConfirmation } from "@/lib/email/emailService";
 
+// GET applications with filters
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
     const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
+
+    // Query parameters
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
-    const status = searchParams.get("status");
     const jobId = searchParams.get("jobId");
+    const status = searchParams.get("status");
+    const candidateId = searchParams.get("candidateId");
+    const search = searchParams.get("search");
 
     const skip = (page - 1) * limit;
 
-    const user = await User.findOne({ email: session.user.email });
+    // Build query
+    const query: any = {};
 
-    let query: any = {};
-
-    if (user?.role === "candidate") {
-      query.candidate = user._id;
-    } else if (user?.role === "recruiter") {
-      // Get jobs posted by this recruiter
-      const jobs = await Job.find({ recruiter: user._id }).select("_id");
-      const jobIds = jobs.map((job) => job._id);
-      query.job = { $in: jobIds };
+    if (jobId) {
+      query.job = jobId;
     }
 
     if (status) {
       query.status = status;
     }
 
-    if (jobId) {
-      query.job = jobId;
+    if (candidateId) {
+      query.candidate = candidateId;
+    }
+
+    // Apply user permissions
+    if (session?.user?.email) {
+      const user = await User.findOne({ email: session.user.email });
+
+      if (user) {
+        if (user.role === "candidate") {
+          // Candidates can only see their own applications
+          query.candidate = user._id;
+        } else if (user.role === "recruiter") {
+          // Recruiters can only see applications for their jobs
+          const recruiterJobs = await Job.find({ recruiter: user._id });
+          query.job = { $in: recruiterJobs.map((job) => job._id) };
+        }
+      }
+    } else {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Search by candidate name or email
+    if (search) {
+      const candidates = await User.find({
+        $or: [
+          { firstName: new RegExp(search, "i") },
+          { lastName: new RegExp(search, "i") },
+          { email: new RegExp(search, "i") },
+        ],
+        role: "candidate",
+      });
+      query.candidate = { $in: candidates.map((c) => c._id) };
     }
 
     const [applications, total] = await Promise.all([
       Application.find(query)
-        .populate("job", "title company")
-        .populate("candidate", "firstName lastName email")
-        .populate("resume", "originalFileName")
+        .populate("job", "title company location")
+        .populate("candidate", "firstName lastName email avatar")
         .sort({ appliedAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -75,6 +100,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// CREATE new application
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
@@ -85,15 +111,17 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await User.findOne({ email: session.user.email });
-    if (user?.role !== "candidate") {
+    if (!user || user.role !== "candidate") {
       return NextResponse.json(
         { error: "Only candidates can apply for jobs" },
         { status: 403 }
       );
     }
 
-    const { jobId, resumeId, coverLetter } = await request.json();
+    const body = await request.json();
+    const { jobId, resumeId, coverLetter } = body;
 
+    // Validate required fields
     if (!jobId || !resumeId) {
       return NextResponse.json(
         { error: "Job ID and Resume ID are required" },
@@ -102,18 +130,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if job exists and is active
-    const job = await Job.findOne({ _id: jobId, isActive: true });
+    const job = await Job.findById(jobId);
     if (!job) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+
+    if (!job.isActive) {
       return NextResponse.json(
-        { error: "Job not found or no longer active" },
-        { status: 404 }
+        { error: "This job is no longer accepting applications" },
+        { status: 400 }
       );
     }
 
     // Check if resume belongs to user
-    const resume = await Resume.findOne({ _id: resumeId, user: user._id });
+    const resume = await Resume.findOne({
+      _id: resumeId,
+      user: user._id,
+    });
+
     if (!resume) {
-      return NextResponse.json({ error: "Resume not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Resume not found or access denied" },
+        { status: 404 }
+      );
     }
 
     // Check if already applied
@@ -129,10 +168,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate match score (simplified - in reality use AI)
+    // Calculate match score
     const jobSkills = job.skills || [];
     const resumeSkills = resume.parsedData?.structuredData?.skills || [];
-    const matchScore = calculateMatchScore(jobSkills, resumeSkills);
+    let matchingScore = 0;
+
+    if (jobSkills.length > 0 && resumeSkills.length > 0) {
+      const matchedSkills = resumeSkills.filter((skill: string) =>
+        jobSkills.some(
+          (jobSkill: string) =>
+            jobSkill.toLowerCase().includes(skill.toLowerCase()) ||
+            skill.toLowerCase().includes(jobSkill.toLowerCase())
+        )
+      );
+      matchingScore = Math.round(
+        (matchedSkills.length / jobSkills.length) * 100
+      );
+    }
 
     // Create application
     const application = await Application.create({
@@ -140,14 +192,23 @@ export async function POST(request: NextRequest) {
       candidate: user._id,
       resume: resumeId,
       coverLetter: coverLetter || "",
-      matchingScore: matchScore,
+      status: "pending",
+      appliedAt: new Date(),
+      matchingScore,
     });
 
-    // Increment application count on job
-    await Job.updateOne({ _id: jobId }, { $inc: { applications: 1 } });
+    // Increment job applications count
+    await Job.findByIdAndUpdate(jobId, {
+      $inc: { applications: 1 },
+    });
 
     // Send confirmation email
-    await sendApplicationConfirmation(user.email, job.title);
+    try {
+      await sendApplicationConfirmation(user.email, job.title);
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json(
       {
@@ -164,21 +225,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function calculateMatchScore(
-  jobSkills: string[],
-  resumeSkills: string[]
-): number {
-  if (jobSkills.length === 0) return 0;
-
-  const matchedSkills = resumeSkills.filter((skill) =>
-    jobSkills.some(
-      (jobSkill) =>
-        jobSkill.toLowerCase().includes(skill.toLowerCase()) ||
-        skill.toLowerCase().includes(jobSkill.toLowerCase())
-    )
-  );
-
-  return Math.round((matchedSkills.length / jobSkills.length) * 100);
 }

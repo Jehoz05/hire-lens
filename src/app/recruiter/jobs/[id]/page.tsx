@@ -72,7 +72,9 @@ export default function JobDetailsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const jobId = params.id as string;
+
+  // Add null check and logging
+  const jobId = params?.id as string;
 
   const [job, setJob] = useState<Job | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -80,6 +82,15 @@ export default function JobDetailsPage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
+    console.log("🔍 Route params:", params);
+    console.log("🔍 Job ID from params:", jobId);
+
+    if (!jobId) {
+      console.error("❌ No job ID found in route params");
+      toast.error("Invalid job URL");
+      return;
+    }
+
     if (status === "unauthenticated") {
       router.push("/login");
       return;
@@ -91,35 +102,55 @@ export default function JobDetailsPage() {
     }
 
     fetchJobDetails();
-  }, [session, status, router, jobId]);
+  }, [session, status, router, jobId]); // Add jobId to dependency array
 
   const fetchJobDetails = async () => {
+    if (!jobId) {
+      console.error("Cannot fetch job details: jobId is undefined");
+      toast.error("Invalid job ID");
+      return;
+    }
+
     try {
       setLoading(true);
-      const [jobResponse, applicationsResponse] = await Promise.all([
-        fetch(`/api/jobs/${jobId}`),
-        fetch(`/api/applications?jobId=${jobId}`),
-      ]);
+      console.log(`🔄 Fetching job details for ID: ${jobId}`);
+
+      const jobResponse = await fetch(`/api/jobs/${jobId}`);
+      console.log(`📥 Job API response status: ${jobResponse.status}`);
+
+      const jobData = await jobResponse.json();
+      console.log(`📊 Job API response data:`, jobData);
 
       if (jobResponse.ok) {
-        const jobData = await jobResponse.json();
         setJob(jobData.data);
+      } else {
+        console.error(`❌ Job fetch failed:`, jobData.error);
+        toast.error(`Failed to load job: ${jobData.error || "Unknown error"}`);
       }
 
-      if (applicationsResponse.ok) {
-        const appsData = await applicationsResponse.json();
-        setApplications(appsData.data || []);
+      // Try to fetch applications separately
+      try {
+        const applicationsResponse = await fetch(
+          `/api/applications?jobId=${jobId}`
+        );
+        if (applicationsResponse.ok) {
+          const appsData = await applicationsResponse.json();
+          setApplications(appsData.data || []);
+        }
+      } catch (appError) {
+        console.error("Failed to fetch applications:", appError);
+        // Don't show error for applications - job might still be valid
       }
     } catch (error) {
-      console.error("Error fetching job details:", error);
-      toast.error("Failed to load job details");
+      console.error("❌ Error fetching job details:", error);
+      toast.error("Failed to load job details. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const toggleJobStatus = async () => {
-    if (!job) return;
+    if (!job || !jobId) return;
 
     try {
       const response = await fetch(`/api/jobs/${jobId}`, {
@@ -135,6 +166,9 @@ export default function JobDetailsPage() {
         toast.success(
           `Job ${!job.isActive ? "activated" : "deactivated"} successfully`
         );
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update job status");
       }
     } catch (error) {
       console.error("Error toggling job status:", error);

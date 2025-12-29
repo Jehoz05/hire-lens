@@ -41,7 +41,7 @@ export default function EditJobPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const jobId = params.id as string;
+  const jobId = params?.id as string;
 
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,14 @@ export default function EditJobPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    console.log("🔍 Route params:", params);
+    console.log("🔍 Job ID from params:", jobId);
+
+    if (!jobId) {
+      console.error("❌ No job ID found in route params");
+      toast.error("Invalid job URL");
+      return;
+    }
     if (status === "unauthenticated") {
       router.push("/login");
       return;

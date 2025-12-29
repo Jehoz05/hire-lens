@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IJob extends Document {
   title: string;
@@ -6,13 +6,13 @@ export interface IJob extends Document {
   requirements: string[];
   responsibilities: string[];
   location: string;
-  type: 'full-time' | 'part-time' | 'contract' | 'internship' | 'remote';
-  experienceLevel: 'entry' | 'mid' | 'senior' | 'executive';
+  type: "full-time" | "part-time" | "contract" | "internship" | "remote";
+  experienceLevel: "entry" | "mid" | "senior" | "executive";
   salary: {
     min: number;
     max: number;
     currency: string;
-    period: 'hourly' | 'monthly' | 'yearly';
+    period: "hourly" | "monthly" | "yearly";
   };
   company: {
     name: string;
@@ -24,6 +24,7 @@ export interface IJob extends Document {
   skills: string[];
   applicationDeadline?: Date;
   isActive: boolean;
+  status: "active" | "draft" | "closed";
   views: number;
   applications: number;
   createdAt: Date;
@@ -41,26 +42,30 @@ const jobSchema = new Schema<IJob>(
       type: String,
       required: true,
     },
-    requirements: [{
-      type: String,
-      trim: true,
-    }],
-    responsibilities: [{
-      type: String,
-      trim: true,
-    }],
+    requirements: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    responsibilities: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     location: {
       type: String,
       required: true,
     },
     type: {
       type: String,
-      enum: ['full-time', 'part-time', 'contract', 'internship', 'remote'],
+      enum: ["full-time", "part-time", "contract", "internship", "remote"],
       required: true,
     },
     experienceLevel: {
       type: String,
-      enum: ['entry', 'mid', 'senior', 'executive'],
+      enum: ["entry", "mid", "senior", "executive"],
       required: true,
     },
     salary: {
@@ -74,12 +79,12 @@ const jobSchema = new Schema<IJob>(
       },
       currency: {
         type: String,
-        default: 'USD',
+        default: "USD",
       },
       period: {
         type: String,
-        enum: ['hourly', 'monthly', 'yearly'],
-        default: 'yearly',
+        enum: ["hourly", "monthly", "yearly"],
+        default: "yearly",
       },
     },
     company: {
@@ -92,7 +97,7 @@ const jobSchema = new Schema<IJob>(
     },
     recruiter: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     category: {
@@ -100,14 +105,21 @@ const jobSchema = new Schema<IJob>(
       required: true,
       trim: true,
     },
-    skills: [{
-      type: String,
-      trim: true,
-    }],
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     applicationDeadline: Date,
     isActive: {
       type: Boolean,
       default: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "draft", "closed"],
+      default: "draft",
     },
     views: {
       type: Number,
@@ -124,8 +136,9 @@ const jobSchema = new Schema<IJob>(
 );
 
 // Index for search functionality
-jobSchema.index({ title: 'text', description: 'text', skills: 'text' });
+jobSchema.index({ title: "text", description: "text", skills: "text" });
 jobSchema.index({ isActive: 1, applicationDeadline: 1 });
 jobSchema.index({ recruiter: 1 });
 
-export const Job = mongoose.models.Job || mongoose.model<IJob>('Job', jobSchema);
+export const Job =
+  mongoose.models.Job || mongoose.model<IJob>("Job", jobSchema);

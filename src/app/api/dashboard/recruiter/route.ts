@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import dbConnect from '@/lib/utils/dbConnect';
-import { Job } from '@/lib/models/Job';
-import { Application } from '@/lib/models/Application';
-import { User } from '@/lib/models/User';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import dbConnect from "@/lib/utils/dbConnect";
+import { Job } from "@/lib/models/Job";
+import { Application } from "@/lib/models/Application";
+import { User } from "@/lib/models/User";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,83 +11,84 @@ export async function GET(request: NextRequest) {
 
     const session = await getServerSession();
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await User.findOne({ email: session.user.email });
-    if (user?.role !== 'recruiter') {
-      return NextResponse.json(
-        { error: 'Access denied' },
-        { status: 403 }
-      );
+    if (!user || user.role !== "recruiter") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get current date and dates for calculations
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Get recruiter's stats
+    const [
+      totalJobs,
+      activeJobs,
+      totalApplications,
+      pendingApplications,
+      hiredCandidates,
+      recentApplications,
+    ] = await Promise.all([
+      Job.countDocuments({ recruiter: user._id }),
+      Job.countDocuments({ recruiter: user._id, isActive: true }),
+      Application.countDocuments({
+        job: { $in: await Job.find({ recruiter: user._id }).distinct("_id") },
+      }),
+      Application.countDocuments({
+        job: { $in: await Job.find({ recruiter: user._id }).distinct("_id") },
+        status: "pending",
+      }),
+      Application.countDocuments({
+        job: { $in: await Job.find({ recruiter: user._id }).distinct("_id") },
+        status: "hired",
+      }),
+      Application.find({
+        job: { $in: await Job.find({ recruiter: user._id }).distinct("_id") },
+      })
+        .populate("job", "title")
+        .populate("candidate", "firstName lastName email")
+        .sort({ appliedAt: -1 })
+        .limit(5),
+    ]);
 
-    // Get all jobs posted by recruiter
-    const jobs = await Job.find({ recruiter: user._id });
+    // Get applications by status for chart
+    const applicationsByStatus = await Application.aggregate([
+      {
+        $match: {
+          job: { $in: await Job.find({ recruiter: user._id }).distinct("_id") },
+        },
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
 
-    // Get all applications for recruiter's jobs
-    const jobIds = jobs.map(job => job._id);
-    const applications = await Application.find({ job: { $in: jobIds } });
-
-    // Calculate statistics
-    const totalJobs = jobs.length;
-    const activeJobs = jobs.filter(job => job.isActive).length;
-    const totalApplications = applications.length;
-    
-    const pendingApplications = applications.filter(
-      app => app.status === 'pending'
-    ).length;
-    
-    const hiredCandidates = applications.filter(
-      app => app.status === 'hired'
-    ).length;
-
-    // Get recent applications (last 30 days)
-    const recentApplications = await Application.find({
-      job: { $in: jobIds },
-      appliedAt: { $gte: thirtyDaysAgo },
-    })
-      .populate('job', 'title')
-      .populate('candidate', 'firstName lastName')
-      .sort({ appliedAt: -1 })
-      .limit(10);
-
-    // Get top performing jobs
-    const jobPerformance = await Application.aggregate([
-      { $match: { job: { $in: jobIds } } },
-      { $group: {
-          _id: '$job',
+    // Get monthly applications
+    const monthlyApplications = await Application.aggregate([
+      {
+        $match: {
+          job: { $in: await Job.find({ recruiter: user._id }).distinct("_id") },
+          appliedAt: {
+            $gte: new Date(new Date().setMonth(new Date().getMonth() - 6)),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$appliedAt" },
+            month: { $month: "$appliedAt" },
+          },
           applications: { $sum: 1 },
-          hires: { $sum: { $cond: [{ $eq: ['$status', 'hired'] }, 1, 0] } },
-        }
+          hires: {
+            $sum: { $cond: [{ $eq: ["$status", "hired"] }, 1, 0] },
+          },
+        },
       },
-      { $lookup: {
-          from: 'jobs',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'jobDetails',
-        }
-      },
-      { $unwind: '$jobDetails' },
-      { $project: {
-          title: '$jobDetails.title',
-          applications: 1,
-          hires: 1,
-          successRate: { $multiply: [
-            { $divide: ['$hires', { $max: [1, '$applications'] }] },
-            100
-          ]},
-        }
-      },
-      { $sort: { applications: -1 } },
-      { $limit: 5 },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+      { $limit: 6 },
     ]);
 
     return NextResponse.json({
@@ -101,13 +102,14 @@ export async function GET(request: NextRequest) {
           hiredCandidates,
         },
         recentApplications,
-        jobPerformance,
+        applicationsByStatus,
+        monthlyApplications,
       },
     });
   } catch (error: any) {
-    console.error('Recruiter dashboard error:', error);
+    console.error("Get recruiter dashboard error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

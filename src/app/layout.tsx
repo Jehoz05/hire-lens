@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next"; // Add Viewport import
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -7,17 +7,6 @@ import Footer from "@/components/common/Footer";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
-
-// Export viewport separately (Next.js 14 requirement)
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
-};
 
 export const metadata: Metadata = {
   title: "RecruitPro - Find Your Dream Job",
@@ -62,7 +51,15 @@ export const metadata: Metadata = {
     images: ["/twitter-image.png"],
     creator: "@recruitpro",
   },
-  // REMOVE viewport and themeColor from here
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({
