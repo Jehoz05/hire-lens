@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useSession, signIn, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export function useAuth() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
 
-  const isAuthenticated = status === 'authenticated';
-  const isLoading = status === 'loading';
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading";
   const user = session?.user;
 
   const login = async (email: string, password: string) => {
-    const result = await signIn('credentials', {
+    const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
@@ -27,7 +27,7 @@ export function useAuth() {
 
   const logout = async () => {
     await signOut({ redirect: false });
-    router.push('/auth/login');
+    router.push("/login");
   };
 
   const refreshSession = async () => {

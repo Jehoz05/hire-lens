@@ -1,7 +1,7 @@
+// lib/models/User.ts - Simplified
 import mongoose, { Document, Schema, Model } from "mongoose";
 import bcrypt from "bcryptjs";
 
-// Define the interface for TypeScript
 export interface IUser extends Document {
   email: string;
   password: string;
@@ -14,167 +14,73 @@ export interface IUser extends Document {
   location?: string;
   bio?: string;
   skills: string[];
-  experience?: Array<{
-    title: string;
-    company: string;
-    startDate: Date;
-    endDate?: Date;
-    current: boolean;
-    description?: string;
-  }>;
-  education?: Array<{
-    degree: string;
-    institution: string;
-    fieldOfStudy: string;
-    startDate: Date;
-    endDate?: Date;
-    current: boolean;
-  }>;
-  favorites?: Array<{
-    candidate: mongoose.Types.ObjectId;
-    notes?: string;
-    addedAt: Date;
-  }>;
+  experience?: any[];
+  education?: any[];
+  favorites?: any[];
   isVerified: boolean;
   verificationToken?: string;
   verificationTokenExpiry?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
   lastLogin?: Date;
+  authProvider?: "credentials" | "google" | "github" | null;
+  providerId?: string;
   createdAt: Date;
   updatedAt: Date;
 
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-// Define the schema
 const userSchema = new Schema<IUser>(
   {
-    email: {
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    role: { type: String, enum: ["candidate", "recruiter"], required: true },
+    avatar: { type: String, default: "" },
+    company: { type: String, default: "" },
+    title: { type: String, default: "" },
+    location: { type: String, default: "" },
+    bio: { type: String, default: "" },
+    skills: [{ type: String }],
+    experience: [{ type: Schema.Types.Mixed }],
+    education: [{ type: Schema.Types.Mixed }],
+    favorites: [{ type: Schema.Types.Mixed }],
+    isVerified: { type: Boolean, default: false },
+    verificationToken: String,
+    verificationTokenExpiry: Date,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+    lastLogin: Date,
+    authProvider: {
       type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
+      enum: ["credentials", "google", "github", null],
+      default: null,
     },
-    password: {
-      type: String,
-      required: true,
-    },
-    firstName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    lastName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    role: {
-      type: String,
-      enum: ["recruiter", "candidate"],
-      required: true,
-    },
-    avatar: {
-      type: String,
-      default: "",
-    },
-    company: {
-      type: String,
-      default: "",
-    },
-    title: {
-      type: String,
-      default: "",
-    },
-    location: {
-      type: String,
-      default: "",
-    },
-    bio: {
-      type: String,
-      default: "",
-      maxlength: 500,
-    },
-    skills: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    experience: [
-      {
-        title: String,
-        company: String,
-        startDate: Date,
-        endDate: Date,
-        current: { type: Boolean, default: false },
-        description: String,
-      },
-    ],
-    education: [
-      {
-        degree: String,
-        institution: String,
-        fieldOfStudy: String,
-        startDate: Date,
-        endDate: Date,
-        current: { type: Boolean, default: false },
-      },
-    ],
-    favorites: [
-      {
-        candidate: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
-        notes: String,
-        addedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-    verificationToken: {
-      type: String,
-    },
-    verificationTokenExpiry: {
-      type: Date,
-    },
-    resetPasswordToken: {
-      type: String,
-    },
-    resetPasswordExpires: {
-      type: Date,
-    },
-    lastLogin: {
-      type: Date,
-    },
+    providerId: String,
   },
   {
     timestamps: true,
+    toJSON: {
+      transform: function (doc, ret: any) {
+        delete ret.password;
+        delete ret.verificationToken;
+        delete ret.verificationTokenExpiry;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordExpires;
+        return ret;
+      },
+    },
   }
 );
 
-// Add methods to the schema
+// Compare password method
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Create indexes
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ isVerified: 1 });
-
-// Create the model
-const User: Model<IUser> =
+export const User =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema);
-
-export { User };

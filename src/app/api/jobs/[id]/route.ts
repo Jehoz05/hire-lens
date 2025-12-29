@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import dbConnect from "@/lib/utils/dbConnect";
 import { Job } from "@/lib/models/Job";
-import { User } from "@/lib/models/User";
+import {User} from "@/lib/models/User";
 
 // ✅ FIX: Await params in the function signature
 export async function GET(

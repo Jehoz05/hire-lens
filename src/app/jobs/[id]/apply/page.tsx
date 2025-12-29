@@ -1,6 +1,6 @@
 // app/jobs/[id]/apply/page.tsx
 "use client";
-
+import { useDropzone } from "react-dropzone";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -175,30 +175,34 @@ export default function ApplyJobPage() {
     }
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleDrop = async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
 
-    // Validate file type
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
+      // Validate file type
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
 
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please upload a PDF or Word document");
-      return;
+      if (!allowedTypes.includes(file.type)) {
+        alert("Please upload a PDF or Word document");
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size should be less than 5MB");
+        return;
+      }
+
+      // Upload the file
+      await handleFileUploadFromFile(file);
     }
+  };
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size should be less than 5MB");
-      return;
-    }
-
+  const handleFileUploadFromFile = async (file: File) => {
     const formData = new FormData();
     formData.append("resume", file);
 
@@ -252,6 +256,19 @@ export default function ApplyJobPage() {
       setUploadProgress(0);
     }
   };
+
+  // Add dropzone hook
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handleDrop,
+    accept: {
+      "application/pdf": [".pdf"],
+      "application/msword": [".doc"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
+    },
+    maxFiles: 1,
+    multiple: false,
+  });
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -821,8 +838,8 @@ export default function ApplyJobPage() {
           </div>
         </div>
       </div>
-
       {/* Resume Upload Dialog */}
+      // Update the Resume Upload Dialog section in the return statement
       <Dialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -848,21 +865,27 @@ export default function ApplyJobPage() {
                 </p>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <div
+                {...getRootProps()}
+                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-colors hover:border-primary hover:bg-primary/5"
+              >
+                <input {...getInputProps()} id="resume-upload" />
                 <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600 mb-4">
-                  Drag & drop your resume here, or click to browse
+                  {isDragActive
+                    ? "Drop your file here"
+                    : "Drag & drop your resume here"}
                 </p>
-                <Input
-                  type="file"
-                  id="resume-upload"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                />
-                <Label htmlFor="resume-upload">
-                  <Button>
-                    <span>Browse Files</span>
+                <p className="text-sm text-gray-500 mb-4">or</p>
+                <Label htmlFor="resume-upload" className="cursor-pointer">
+                  <Button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById("resume-upload")?.click();
+                    }}
+                  >
+                    Browse Files
                   </Button>
                 </Label>
                 <p className="text-sm text-gray-500 mt-4">
@@ -883,7 +906,6 @@ export default function ApplyJobPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent className="sm:max-w-lg">

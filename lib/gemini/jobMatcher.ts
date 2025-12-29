@@ -1,6 +1,9 @@
-import axios from 'axios';
+import axios from "axios";
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GOOGLE_GEMINI_MODEL || "gemini-pro";
 
 export interface MatchingResult {
   score: number;
@@ -19,10 +22,14 @@ export interface MatchingResult {
 
 export async function matchResumeToJobs(
   resumeText: string,
-  jobDescriptions: Array<{ title: string; description: string; requirements: string[] }>
+  jobDescriptions: Array<{
+    title: string;
+    description: string;
+    requirements: string[];
+  }>
 ): Promise<MatchingResult> {
-  if (!DEEPSEEK_API_KEY) {
-    throw new Error('DeepSeek API key is not configured');
+  if (!GEMINI_API_KEY) {
+    throw new Error("DeepSeek API key is not configured");
   }
 
   try {
@@ -30,11 +37,15 @@ export async function matchResumeToJobs(
       Resume: ${resumeText}
       
       Jobs to match against:
-      ${jobDescriptions.map((job, i) => `
+      ${jobDescriptions
+        .map(
+          (job, i) => `
         Job ${i + 1}: ${job.title}
         Description: ${job.description}
-        Requirements: ${job.requirements.join(', ')}
-      `).join('\n')}
+        Requirements: ${job.requirements.join(", ")}
+      `
+        )
+        .join("\n")}
       
       Analyze this resume against the jobs and provide:
       1. Overall match score (0-100)
@@ -64,16 +75,16 @@ export async function matchResumeToJobs(
     `;
 
     const response = await axios.post(
-      'https://api.deepseek.com/v1/chat/completions',
+      GEMINI_API_URL,
       {
-        model: 'deepseek-chat',
+        model: "gemini-chat",
         messages: [
           {
-            role: 'system',
-            content: 'You are a career advisor and job matching expert.',
+            role: "system",
+            content: "You are a career advisor and job matching expert.",
           },
           {
-            role: 'user',
+            role: "user",
             content: prompt,
           },
         ],
@@ -82,15 +93,15 @@ export async function matchResumeToJobs(
       },
       {
         headers: {
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
         },
       }
     );
 
     return JSON.parse(response.data.choices[0].message.content);
   } catch (error: any) {
-    console.error('DeepSeek matching error:', error);
+    console.error("Gemini matching error:", error);
     throw new Error(`Failed to match resume: ${error.message}`);
   }
 }

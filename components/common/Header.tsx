@@ -1,3 +1,4 @@
+// components/common/Header.tsx
 "use client";
 
 import { useState } from "react";
@@ -13,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/Dropdown";
+import JobMatcher from "@/components/header/JobMatcher"; // Add this import
 import { Bell, Search, User, Briefcase, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils/helpers";
 
@@ -109,6 +111,9 @@ export default function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-4">
+            {/* Job Matcher (Candidate Only) */}
+            <JobMatcher />
+
             {/* Search Icon for Mobile */}
             <button className="lg:hidden p-2">
               <Search className="h-5 w-5" />
@@ -163,6 +168,11 @@ export default function Header() {
                   <DropdownMenuItem asChild>
                     <Link href={`/${user.role}/dashboard`}>Dashboard</Link>
                   </DropdownMenuItem>
+                  {user.role === "candidate" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/candidate/matches">Job Matches</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-red-600"

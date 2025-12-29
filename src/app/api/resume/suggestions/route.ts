@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import dbConnect from "@/lib/utils/dbConnect";
 import { Resume } from "@/lib/models/Resume";
 import { User } from "@/lib/models/User";
-import { getResumeSuggestions } from "@/lib/deekseek/suggestions";
+import { getResumeSuggestions } from "@/lib/gemini/suggestions";
 
 export async function POST(request: NextRequest) {
   try {
