@@ -149,6 +149,22 @@ export default function JobDetailsPage() {
     }
   };
 
+  // Add this function to refresh jobs when status changes
+  const refreshJobsList = async () => {
+    try {
+      const response = await fetch("/api/jobs/filter");
+      if (response.ok) {
+        const data = await response.json();
+        // Update the jobs list in parent component if needed
+        // You might want to pass a callback or use a global state
+        console.log("Jobs list refreshed");
+      }
+    } catch (error) {
+      console.error("Error refreshing jobs list:", error);
+    }
+  };
+
+  // Then call refreshJobsList() after toggling status
   const toggleJobStatus = async () => {
     if (!job || !jobId) return;
 
@@ -163,6 +179,7 @@ export default function JobDetailsPage() {
 
       if (response.ok) {
         setJob({ ...job, isActive: !job.isActive });
+        await refreshJobsList(); // Refresh the jobs list
         toast.success(
           `Job ${!job.isActive ? "activated" : "deactivated"} successfully`
         );

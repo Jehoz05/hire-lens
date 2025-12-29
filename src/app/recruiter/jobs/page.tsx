@@ -1,3 +1,4 @@
+// @/app/recruiter/jobs/page.tsx - Updated version
 "use client";
 
 import { useState, useEffect } from "react";
@@ -69,132 +70,38 @@ interface Job {
   category: string;
 }
 
-const mockJobs: Job[] = [
-  {
-    _id: "1",
-    title: "Senior Frontend Developer",
-    company: {
-      name: "TechCorp",
-      logo: "/logo-techcorp.png",
-    },
-    location: "Remote",
-    type: "full-time",
-    experienceLevel: "senior",
-    salary: {
-      min: 120000,
-      max: 160000,
-      currency: "USD",
-    },
-    skills: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-    createdAt: "2024-01-15T10:30:00Z",
-    isActive: true,
-    applications: 45,
-    views: 320,
-    status: "active",
-    category: "Software Development",
-  },
-  {
-    _id: "2",
-    title: "UX/UI Designer",
-    company: {
-      name: "DesignStudio",
-      logo: "/logo-designstudio.png",
-    },
-    location: "New York, NY",
-    type: "full-time",
-    experienceLevel: "mid",
-    salary: {
-      min: 90000,
-      max: 120000,
-      currency: "USD",
-    },
-    skills: ["Figma", "Adobe XD", "UI/UX Design", "Prototyping"],
-    createdAt: "2024-01-14T14:20:00Z",
-    isActive: true,
-    applications: 32,
-    views: 280,
-    status: "active",
-    category: "Design",
-  },
-  {
-    _id: "3",
-    title: "DevOps Engineer",
-    company: {
-      name: "CloudSystems",
-      logo: "/logo-cloudsystems.png",
-    },
-    location: "San Francisco, CA",
-    type: "contract",
-    experienceLevel: "senior",
-    salary: {
-      min: 130000,
-      max: 180000,
-      currency: "USD",
-    },
-    skills: ["AWS", "Docker", "Kubernetes", "Terraform"],
-    createdAt: "2024-01-13T09:15:00Z",
-    isActive: false,
-    applications: 25,
-    views: 210,
-    status: "draft",
-    category: "DevOps",
-  },
-  {
-    _id: "4",
-    title: "Product Manager",
-    company: {
-      name: "ProductLabs",
-      logo: "/logo-productlabs.png",
-    },
-    location: "Austin, TX",
-    type: "full-time",
-    experienceLevel: "senior",
-    salary: {
-      min: 140000,
-      max: 190000,
-      currency: "USD",
-    },
-    skills: ["Product Strategy", "Agile", "Roadmapping", "Analytics"],
-    createdAt: "2024-01-12T11:45:00Z",
-    isActive: true,
-    applications: 38,
-    views: 350,
-    status: "active",
-    category: "Product",
-  },
-  {
-    _id: "5",
-    title: "Backend Engineer",
-    company: {
-      name: "DataSystems",
-      logo: "/logo-datasystems.png",
-    },
-    location: "Remote",
-    type: "full-time",
-    experienceLevel: "mid",
-    salary: {
-      min: 110000,
-      max: 150000,
-      currency: "USD",
-    },
-    skills: ["Python", "Django", "PostgreSQL", "Redis"],
-    createdAt: "2024-01-10T16:20:00Z",
-    isActive: false,
-    applications: 18,
-    views: 190,
-    status: "closed",
-    category: "Software Development",
-  },
-];
-
 export default function JobsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>(mockJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch jobs from API
+  const fetchJobs = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/jobs/filter");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch jobs");
+      }
+
+      const data = await response.json();
+      console.log("Fetched jobs:", data.data);
+      setJobs(data.data || []);
+      setFilteredJobs(data.data || []);
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      toast.error("Failed to load jobs");
+      setJobs([]);
+      setFilteredJobs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -207,11 +114,14 @@ export default function JobsPage() {
       return;
     }
 
+    fetchJobs();
+  }, [session, status, router]);
+
+  useEffect(() => {
     applyFilters();
-  }, [session, status, router, searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, jobs]);
 
   const applyFilters = () => {
-    setIsLoading(true);
     let filtered = [...jobs];
 
     // Apply search query
@@ -243,7 +153,6 @@ export default function JobsPage() {
     }
 
     setFilteredJobs(filtered);
-    setTimeout(() => setIsLoading(false), 300);
   };
 
   const handleDeleteJob = async (jobId: string) => {
@@ -256,16 +165,20 @@ export default function JobsPage() {
     }
 
     try {
-      // In a real app, call API to delete job
-      console.log("Deleting job:", jobId);
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete job");
+      }
 
       // Remove from local state
       setJobs(jobs.filter((job) => job._id !== jobId));
-
       toast.success("Job deleted successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting job:", error);
-      toast.error("Failed to delete job");
+      toast.error(error.message || "Failed to delete job");
     }
   };
 
@@ -274,8 +187,20 @@ export default function JobsPage() {
       const job = jobs.find((j) => j._id === jobId);
       if (!job) return;
 
-      // In a real app, call API to update status
-      console.log("Toggling job status:", jobId);
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          isActive: !job.isActive,
+          status: !job.isActive ? "active" : "closed",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update job status");
+      }
 
       // Update local state
       setJobs(
@@ -293,9 +218,9 @@ export default function JobsPage() {
       toast.success(
         `Job ${!job.isActive ? "activated" : "deactivated"} successfully`
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error toggling job status:", error);
-      toast.error("Failed to update job status");
+      toast.error(error.message || "Failed to update job status");
     }
   };
 
@@ -359,7 +284,7 @@ export default function JobsPage() {
     totalViews: jobs.reduce((sum, job) => sum + job.views, 0),
   };
 
-  if (status === "loading") {
+  if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -457,9 +382,9 @@ export default function JobsPage() {
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
-                More Filters
+              <Button variant="outline" onClick={() => fetchJobs()}>
+                <Search className="h-4 w-4 mr-2" />
+                Refresh
               </Button>
               <Button onClick={applyFilters}>Apply Filters</Button>
             </div>
@@ -671,105 +596,6 @@ export default function JobsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Top Performing Jobs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {jobs
-                  .filter((job) => job.isActive)
-                  .sort((a, b) => b.applications - a.applications)
-                  .slice(0, 3)
-                  .map((job) => (
-                    <div
-                      key={job._id}
-                      className="flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-medium text-sm">{job.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {job.applications} applications
-                        </div>
-                      </div>
-                      <Badge variant="secondary">
-                        {Math.round((job.applications / job.views) * 100)}%
-                        conversion
-                      </Badge>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Recently Created
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {jobs
-                  .sort(
-                    (a, b) =>
-                      new Date(b.createdAt).getTime() -
-                      new Date(a.createdAt).getTime()
-                  )
-                  .slice(0, 3)
-                  .map((job) => (
-                    <div
-                      key={job._id}
-                      className="flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-medium text-sm">{job.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(job.createdAt)}
-                        </div>
-                      </div>
-                      {getStatusBadge(job)}
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Link href="/recruiter/jobs/new">
-                  <Button className="w-full justify-start">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create New Job
-                  </Button>
-                </Link>
-                <Link href="/recruiter/jobs?status=draft">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Clock className="h-4 w-4 mr-2" />
-                    View Drafts
-                  </Button>
-                </Link>
-                <Link href="/recruiter/jobs?status=closed">
-                  <Button variant="outline" className="w-full justify-start">
-                    <XCircle className="h-4 w-4 mr-2" />
-                    View Closed Jobs
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </DashboardLayout>
   );
