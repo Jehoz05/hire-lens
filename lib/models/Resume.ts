@@ -79,10 +79,11 @@ const resumeSchema = new Schema<IResume>(
     summary: {
       type: String,
       required: true,
+      default: "",
     },
     skills: [
       {
-        category: { type: String, required: true },
+        category: { type: String, required: true, default: "Technical" },
         items: [{ type: String }],
       },
     ],
@@ -166,3 +167,9 @@ resumeSchema.index(
 
 export const Resume =
   mongoose.models.Resume || mongoose.model<IResume>("Resume", resumeSchema);
+
+// Export the interface for use in components
+export type ResumeData = Omit<
+  IResume,
+  keyof Document | "userId" | "lastUpdated" | "isDefault" | "isParsed"
+>;

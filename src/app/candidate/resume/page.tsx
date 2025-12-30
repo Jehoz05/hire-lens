@@ -82,27 +82,47 @@ export default function ResumePage() {
     if (status === "authenticated") {
       fetchResumes();
     } else if (status === "unauthenticated") {
-      router.push("/auth/signin");
+      router.push("/signin");
     }
   }, [status, router]);
 
   const fetchResumes = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/resume");
+      const response = await fetch("/api/resume", {
+        cache: "no-store", // Prevent caching
+      });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (!response.ok) {
+        // If API doesn't exist or returns error, use empty array
+        console.warn("Failed to fetch resumes, using empty array");
+        setResumes([]);
+        return;
+      }
+
+      // Check if response has content
+      const text = await response.text();
+      if (!text) {
+        console.warn("Empty response from API");
+        setResumes([]);
+        return;
+      }
+
+      try {
+        const data = JSON.parse(text);
         setResumes(data.resumes || []);
 
         // Set the first resume as current, or create a new one
         if (data.resumes && data.resumes.length > 0) {
           setCurrentResume(data.resumes[0]);
         }
+      } catch (parseError) {
+        console.error("Failed to parse JSON:", parseError);
+        setResumes([]);
       }
     } catch (error) {
       console.error("Failed to fetch resumes:", error);
-      toast.error("Failed to load resumes");
+      setResumes([]);
     } finally {
       setLoading(false);
     }

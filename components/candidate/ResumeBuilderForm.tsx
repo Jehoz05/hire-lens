@@ -1,4 +1,5 @@
 // components/candidate/ResumeBuilderForm.tsx
+// components/candidate/ResumeBuilderForm.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,7 +26,6 @@ import {
   Download,
   Eye,
   X,
-  Upload,
   Briefcase,
   GraduationCap,
   Code,
@@ -38,60 +38,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-
-interface ResumeData {
-  personalInfo: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    location: string;
-    portfolio?: string;
-    linkedin?: string;
-    github?: string;
-  };
-  summary: string;
-  skills: {
-    category: string;
-    items: string[];
-  }[];
-  experience: Array<{
-    title: string;
-    company: string;
-    location: string;
-    startDate: string;
-    endDate?: string;
-    current: boolean;
-    description: string[];
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    location: string;
-    startDate: string;
-    endDate?: string;
-    current: boolean;
-    gpa?: string;
-    achievements?: string[];
-  }>;
-  projects: Array<{
-    title: string;
-    description: string;
-    technologies: string[];
-    link?: string;
-  }>;
-  certifications: Array<{
-    name: string;
-    issuer: string;
-    date: string;
-    credentialId?: string;
-  }>;
-  languages: Array<{
-    language: string;
-    proficiency: "Native" | "Fluent" | "Intermediate" | "Basic";
-  }>;
-  template: string;
-}
+import type { ResumeData } from "@/lib/types/resume";
 
 const initialResumeData: ResumeData = {
   personalInfo: {
@@ -122,7 +69,7 @@ interface ResumeBuilderFormProps {
   initialData?: ResumeData;
   onSave?: (data: ResumeData) => Promise<void>;
   onGeneratePDF?: (data: ResumeData) => Promise<void>;
-  onPreview?: (data: ResumeData) => void;
+  onPreview?: () => void;
 }
 
 export default function ResumeBuilderForm({
@@ -140,10 +87,17 @@ export default function ResumeBuilderForm({
   const [skillInput, setSkillInput] = useState("");
   const [skillCategory, setSkillCategory] = useState("Technical");
 
+  // Update form when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setResume(initialData);
+    }
+  }, [initialData]);
+
   // Load user data if available
   useEffect(() => {
     if (session?.user && !initialData) {
-      const user = session.user as any; // Type assertion for now
+      const user = session.user as any;
       setResume((prev) => ({
         ...prev,
         personalInfo: {
@@ -156,7 +110,6 @@ export default function ResumeBuilderForm({
     }
   }, [session, initialData]);
 
-  // FIXED: Correct handleInputChange for nested personalInfo
   const handlePersonalInfoChange = (field: string, value: string) => {
     setResume((prev) => ({
       ...prev,
@@ -167,22 +120,18 @@ export default function ResumeBuilderForm({
     }));
   };
 
-  const handleInputChange = (
-    section: keyof ResumeData,
-    field: string,
-    value: any
-  ) => {
+  const handleInputChange = (section: keyof ResumeData, value: any) => {
     setResume((prev) => ({
       ...prev,
       [section]: value,
     }));
   };
 
-  // FIXED: Remove the incorrect handleNestedInputChange function
-  // We'll handle personalInfo separately
-
   const addSkill = () => {
-    if (!skillInput.trim()) return;
+    if (!skillInput.trim()) {
+      toast.error("Please enter a skill");
+      return;
+    }
 
     setResume((prev) => {
       const updatedSkills = [...prev.skills];
@@ -191,6 +140,12 @@ export default function ResumeBuilderForm({
       );
 
       if (categoryIndex !== -1) {
+        // Check if skill already exists
+        if (updatedSkills[categoryIndex].items.includes(skillInput.trim())) {
+          toast.error("Skill already exists in this category");
+          return prev;
+        }
+
         updatedSkills[categoryIndex] = {
           ...updatedSkills[categoryIndex],
           items: [...updatedSkills[categoryIndex].items, skillInput.trim()],
@@ -241,7 +196,7 @@ export default function ResumeBuilderForm({
           title: "",
           company: "",
           location: "",
-          startDate: "",
+          startDate: new Date().toISOString().slice(0, 7), // Current month in YYYY-MM format
           endDate: "",
           current: false,
           description: [""],
@@ -311,7 +266,7 @@ export default function ResumeBuilderForm({
           degree: "",
           institution: "",
           location: "",
-          startDate: "",
+          startDate: new Date().toISOString().slice(0, 7),
           endDate: "",
           current: false,
           gpa: "",
@@ -411,7 +366,7 @@ export default function ResumeBuilderForm({
         {
           name: "",
           issuer: "",
-          date: "",
+          date: new Date().toISOString().slice(0, 7),
           credentialId: "",
         },
       ],
@@ -475,32 +430,47 @@ export default function ResumeBuilderForm({
       return;
     }
 
+    // Validate required fields
+    if (
+      !resume.personalInfo.firstName.trim() ||
+      !resume.personalInfo.lastName.trim()
+    ) {
+      toast.error("Please fill in your name");
+      return;
+    }
+
+    if (!resume.personalInfo.email.trim()) {
+      toast.error("Please fill in your email");
+      return;
+    }
+
+    if (!resume.personalInfo.phone.trim()) {
+      toast.error("Please fill in your phone number");
+      return;
+    }
+
+    if (!resume.personalInfo.location.trim()) {
+      toast.error("Please fill in your location");
+      return;
+    }
+
+    if (!resume.summary.trim()) {
+      toast.error("Please write a professional summary");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Validate required fields
-      if (!resume.personalInfo.firstName || !resume.personalInfo.lastName) {
-        toast.error("Please fill in your name");
-        return;
-      }
-
-      if (!resume.personalInfo.email) {
-        toast.error("Please fill in your email");
-        return;
-      }
-
-      if (!resume.summary) {
-        toast.error("Please write a professional summary");
-        return;
-      }
-
       if (onSave) {
         await onSave(resume);
-        toast.success("Resume saved successfully!");
       } else {
-        // Default save implementation
-        const response = await fetch("/api/resume", {
-          method: "POST",
+        // Determine if this is an update or create
+        const method = resume._id ? "PUT" : "POST";
+        const endpoint = "/api/resume";
+
+        const response = await fetch(endpoint, {
+          method,
           headers: {
             "Content-Type": "application/json",
           },
@@ -508,7 +478,13 @@ export default function ResumeBuilderForm({
         });
 
         if (response.ok) {
-          toast.success("Resume saved successfully!");
+          const result = await response.json();
+          toast.success(result.message || "Resume saved successfully!");
+
+          // Update the resume with the returned data (including _id)
+          if (result.data) {
+            setResume(result.data);
+          }
         } else {
           const error = await response.json();
           toast.error(error.error || "Failed to save resume");
@@ -526,14 +502,13 @@ export default function ResumeBuilderForm({
     if (onGeneratePDF) {
       await onGeneratePDF(resume);
     } else {
-      // Default PDF generation
       toast.success("PDF generation would be implemented here");
     }
   };
 
-  const handlePreview = () => {
+  const handlePreviewClick = () => {
     if (onPreview) {
-      onPreview(resume);
+      onPreview();
     }
   };
 
@@ -551,13 +526,6 @@ export default function ResumeBuilderForm({
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Resume Builder</h1>
-          <p className="text-gray-600 mt-2">
-            Create a professional resume that stands out to recruiters
-          </p>
-        </div>
-
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Navigation */}
           <div className="lg:w-1/4">
@@ -594,7 +562,7 @@ export default function ResumeBuilderForm({
                     <Select
                       value={resume.template}
                       onValueChange={(value) =>
-                        handleInputChange("template", "template", value)
+                        handleInputChange("template", value)
                       }
                     >
                       <SelectTrigger id="template" className="mt-2">
@@ -621,7 +589,7 @@ export default function ResumeBuilderForm({
 
                     <Button
                       variant="outline"
-                      onClick={handlePreview}
+                      onClick={handlePreviewClick}
                       className="w-full"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -800,11 +768,7 @@ export default function ResumeBuilderForm({
                         id="summary"
                         value={resume.summary}
                         onChange={(e) =>
-                          handleInputChange(
-                            "summary",
-                            "summary",
-                            e.target.value
-                          )
+                          handleInputChange("summary", e.target.value)
                         }
                         placeholder="Experienced software developer with 5+ years in web development. Specialized in React, Node.js, and cloud technologies. Passionate about building scalable applications and mentoring junior developers."
                         rows={8}

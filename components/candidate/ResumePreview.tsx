@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import { toast } from "react-hot-toast";
 
 interface ResumeData {
   personalInfo: {
@@ -103,11 +104,52 @@ export default function ResumePreview({ resume }: ResumePreviewProps) {
         throw new Error("Resume content not found");
       }
 
-      const canvas = await html2canvas(element, {
+      // Clone the element to avoid modifying the original
+      const clonedElement = element.cloneNode(true) as HTMLElement;
+
+      // Remove problematic CSS classes that might use "lab" color function
+      clonedElement.classList.remove("bg-gray-50", "bg-white");
+      clonedElement.style.backgroundColor = "white";
+
+      // Also remove from all child elements
+      const allElements = clonedElement.querySelectorAll("*");
+      allElements.forEach((el) => {
+        // Remove common Tailwind classes that might cause issues
+        const classesToRemove = [
+          "bg-gray-50",
+          "bg-white",
+          "text-gray",
+          "border-gray",
+          "ring-gray",
+          "shadow-lg",
+          "rounded-lg",
+        ];
+        classesToRemove.forEach((cls) => {
+          if (el.classList.contains(cls)) {
+            el.classList.remove(cls);
+          }
+        });
+      });
+
+      // Create a container for the PDF generation
+      const container = document.createElement("div");
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "210mm"; // A4 width
+      container.style.backgroundColor = "white";
+      container.appendChild(clonedElement);
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(clonedElement, {
         scale: 2,
         useCORS: true,
         logging: false,
+        backgroundColor: "#ffffff",
+        removeContainer: true,
       });
+
+      document.body.removeChild(container);
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
@@ -152,7 +194,7 @@ export default function ResumePreview({ resume }: ResumePreviewProps) {
       }
     } catch (error) {
       console.error("PDF generation failed:", error);
-      alert("Failed to generate PDF. Please try again.");
+      toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGeneratingPDF(false);
     }

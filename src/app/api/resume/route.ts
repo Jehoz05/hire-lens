@@ -19,9 +19,18 @@ export async function GET(request: NextRequest) {
       .sort({ isDefault: -1, lastUpdated: -1 })
       .lean();
 
+    // Transform the data to match expected structure
+    const transformedResumes = resumes.map((resume) => {
+      const { _id, userId, ...resumeData } = resume;
+      return {
+        ...resumeData,
+        _id: _id.toString(),
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: resumes,
+      resumes: transformedResumes,
     });
   } catch (error: any) {
     console.error("Get resumes error:", error);
@@ -32,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create or update resume
+// POST - Create new resume
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -41,52 +50,152 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { _id, ...resumeData } = body;
 
     await connectDB();
 
-    let resume;
+    // Check if this is the first resume
+    const resumeCount = await Resume.countDocuments({
+      userId: session.user.id,
+    });
 
-    if (_id) {
-      // Update existing resume
-      resume = await Resume.findOneAndUpdate(
-        { _id, userId: session.user.id },
-        {
-          ...resumeData,
-          lastUpdated: new Date(),
-        },
-        { new: true }
+    const resumeData = {
+      ...body,
+      userId: session.user.id,
+      lastUpdated: new Date(),
+      isDefault: resumeCount === 0, // First resume is default
+    };
+
+    const resume = new Resume(resumeData);
+    await resume.save();
+
+    return NextResponse.json({
+      success: true,
+      message: "Resume created successfully",
+      data: {
+        ...resume.toObject(),
+        _id: resume._id.toString(),
+      },
+    });
+  } catch (error: any) {
+    console.error("Create resume error:", error);
+
+    // Handle duplicate default resume error
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { error: "You already have a default resume" },
+        { status: 400 }
       );
-    } else {
-      // Create new resume
-      resume = new Resume({
-        ...resumeData,
-        userId: session.user.id,
+    }
+
+    return NextResponse.json(
+      { error: "Failed to create resume", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Update existing resume
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { _id, ...updateData } = body;
+
+    if (!_id) {
+      return NextResponse.json(
+        { error: "Resume ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const resume = await Resume.findOneAndUpdate(
+      { _id, userId: session.user.id },
+      {
+        ...updateData,
         lastUpdated: new Date(),
-      });
+      },
+      { new: true }
+    );
 
-      // If this is the first resume, set as default
-      const resumeCount = await Resume.countDocuments({
-        userId: session.user.id,
-      });
-      if (resumeCount === 0) {
-        resume.isDefault = true;
-      }
-
-      await resume.save();
+    if (!resume) {
+      return NextResponse.json({ error: "Resume not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
-      message: _id
-        ? "Resume updated successfully"
-        : "Resume created successfully",
-      data: resume,
+      message: "Resume updated successfully",
+      data: {
+        ...resume.toObject(),
+        _id: resume._id.toString(),
+      },
     });
   } catch (error: any) {
-    console.error("Save resume error:", error);
+    console.error("Update resume error:", error);
     return NextResponse.json(
-      { error: "Failed to save resume", details: error.message },
+      { error: "Failed to update resume", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete resume
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Resume ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    // Find the resume first
+    const resume = await Resume.findOne({ _id: id, userId: session.user.id });
+
+    if (!resume) {
+      return NextResponse.json({ error: "Resume not found" }, { status: 404 });
+    }
+
+    // If deleting default resume, set another as default
+    if (resume.isDefault) {
+      const otherResumes = await Resume.find({
+        userId: session.user.id,
+        _id: { $ne: id },
+      }).sort({ lastUpdated: -1 });
+
+      if (otherResumes.length > 0) {
+        await Resume.findByIdAndUpdate(otherResumes[0]._id, {
+          isDefault: true,
+        });
+      }
+    }
+
+    // Delete the resume
+    await Resume.findByIdAndDelete(id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Resume deleted successfully",
+    });
+  } catch (error: any) {
+    console.error("Delete resume error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete resume", details: error.message },
       { status: 500 }
     );
   }
