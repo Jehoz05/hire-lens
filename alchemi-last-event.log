@@ -16,3 +16,9 @@ Source: score
 Action: created
 Time: 
 
+## Alchemi Event Received
+Event type: alchemi-automation
+Source: score
+Action: created
+Time: 
+
