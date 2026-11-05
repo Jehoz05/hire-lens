@@ -28,3 +28,9 @@ Source:
 Action: 
 Time: 
 
+## Alchemi Event Received
+Event type: alchemi-automation
+Source: score
+Action: test
+Time: 2026-11-05T13:55:45.877Z
+
